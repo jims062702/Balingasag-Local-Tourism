@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Public Tourism Destinations
+    // Read: anyone (public)
+    // Write/Update/Delete: Authenticated Admin only
+    match /destinations/{destinationId} {
+      allow read: if true;
+      allow write, update, delete: if request.auth != null;
+    }
+    
+    // Travel Advisories
+    // Read: anyone (public)
+    // Write/Update/Delete: Authenticated Admin only
+    match /advisories/{advisoryId} {
+      allow read: if true;
+      allow write, update, delete: if request.auth != null;
+    }
+    
+    // Local Events & Festivals
+    // Read: anyone (public)
+    // Write/Update/Delete: Authenticated Admin only
+    match /events/{eventId} {
+      allow read: if true;
+      allow write, update, delete: if request.auth != null;
+    }
+  }
+}
