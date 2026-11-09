@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageCircle,
   X,
   Send,
   Sparkles,
@@ -10,6 +9,7 @@ import {
   RotateCcw,
   Clock,
   Phone,
+  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -19,12 +19,15 @@ import {
   getSpamState,
 } from '../services/geminiService';
 
-// Predefined suggestion prompts (James Gasang button removed as requested)
-const SUGGESTIONS = [
-  'Tell me about Vega Ancestral House',
-  'How to visit Camuayan Cold Springs?',
-  'Top attractions in Balingasag',
-  'Emergency hotlines in Balingasag',
+// Basic FAQ Questions (Instant 0-token answers to save tokens)
+const BASIC_QUESTIONS = [
+  'Emergency hotlines',
+  'Top tourism spots',
+  'Tell me about Camuayan Cold Springs',
+  'Where is Vega Ancestral House?',
+  'How to get to Balingasag',
+  'Town fiesta & festival',
+  'Who developed this website?',
 ];
 
 // Dynamic callout messages cycling next to the chatbot icon
@@ -39,7 +42,6 @@ const CALLOUT_MESSAGES = [
 
 /**
  * Helper to render markdown bold, phone numbers, links, and bullets cleanly.
- * Eliminates raw asterisk formatting and arranges responses into clean lists/paragraphs.
  */
 const renderFormattedLine = (line: string, keyPrefix: string, isUser: boolean) => {
   const tokenRegex =
@@ -72,7 +74,7 @@ const renderFormattedLine = (line: string, keyPrefix: string, isUser: boolean) =
           target="_blank"
           rel="noopener noreferrer"
           className={`underline font-bold transition-opacity hover:opacity-80 ${
-            isUser ? 'text-white' : 'text-emerald-600 hover:text-emerald-700'
+            isUser ? 'text-white' : 'text-blue-600 hover:text-blue-700'
           }`}
         >
           jamesgdev.vercel.app ↗
@@ -88,7 +90,7 @@ const renderFormattedLine = (line: string, keyPrefix: string, isUser: boolean) =
           href={token}
           target="_blank"
           rel="noopener noreferrer"
-          className={`underline font-semibold break-all ${isUser ? 'text-white' : 'text-emerald-600'}`}
+          className={`underline font-semibold break-all ${isUser ? 'text-white' : 'text-blue-600'}`}
         >
           {token}
         </a>
@@ -104,8 +106,8 @@ const renderFormattedLine = (line: string, keyPrefix: string, isUser: boolean) =
           href={`tel:${rawNumber}`}
           className={`inline-flex items-center gap-1 font-mono font-bold px-1.5 py-0.5 rounded transition-colors text-[11px] ${
             isUser
-              ? 'bg-emerald-700 text-white hover:bg-emerald-800'
-              : 'bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200'
+              ? 'bg-blue-700 text-white hover:bg-blue-800'
+              : 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200'
           }`}
         >
           <Phone className="w-2.5 h-2.5 shrink-0" />
@@ -133,7 +135,7 @@ const FormattedChatMessage: React.FC<{ text: string; isUser: boolean }> = ({ tex
         key={`list-${listIndex}`}
         className={`my-2 space-y-1.5 pl-1 rounded-xl p-2 border ${
           isUser
-            ? 'bg-emerald-700/50 border-emerald-500/30 text-white'
+            ? 'bg-blue-700/50 border-blue-500/30 text-white'
             : 'bg-slate-50 border-slate-200 text-slate-800'
         }`}
       >
@@ -141,7 +143,7 @@ const FormattedChatMessage: React.FC<{ text: string; isUser: boolean }> = ({ tex
           <li key={itemIdx} className="flex items-start gap-2">
             <span
               className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
-                isUser ? 'bg-white' : 'bg-emerald-500'
+                isUser ? 'bg-white' : 'bg-blue-600'
               }`}
             />
             <span className="flex-1 leading-relaxed text-xs">
@@ -156,7 +158,6 @@ const FormattedChatMessage: React.FC<{ text: string; isUser: boolean }> = ({ tex
 
   lines.forEach((line, lineIdx) => {
     const trimmed = line.trim();
-    // Check if bullet point
     if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
       const content = trimmed.replace(/^[\*\-\•]\s+/, '');
       currentList.push(content);
@@ -192,7 +193,7 @@ export const TourismChatbot: React.FC = () => {
     {
       id: 'welcome',
       role: 'model',
-      text: 'Maayong adlaw! Welcome to Balingasag. I am your AI Tourism Guide. Feel free to ask about our 200-year-old heritage homes, cold springs, seafood, or emergency hotlines!',
+      text: 'Maayong adlaw! Welcome to Balingasag. I am your AI Tourism Guide. Feel free to click any basic question below for instant guidance, or ask me directly!',
       timestamp: Date.now(),
     },
   ]);
@@ -200,18 +201,17 @@ export const TourismChatbot: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Cycle speech bubble animation (typing/thinking vs changing text)
+  // 1. Thinking / typing animation cycle for callout speech bubble
   useEffect(() => {
     if (isOpen) return;
 
     let timer: ReturnType<typeof setTimeout>;
+
     if (bubblePhase === 'text') {
-      // Show text for 4 seconds, then transition to thinking/typing
       timer = setTimeout(() => {
         setBubblePhase('thinking');
-      }, 4000);
+      }, 5500);
     } else {
-      // Show thinking animation for 1.6 seconds, then switch text
       timer = setTimeout(() => {
         setMessageIndex((prev) => (prev + 1) % CALLOUT_MESSAGES.length);
         setBubblePhase('text');
@@ -289,7 +289,7 @@ export const TourismChatbot: React.FC = () => {
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch (err: any) {
-      toast.error('Unable to reach Gemini AI. Please try again shortly.');
+      toast.error('Unable to reach AI server. Please try again shortly.');
       setMessages((prev) => [
         ...prev,
         {
@@ -307,21 +307,20 @@ export const TourismChatbot: React.FC = () => {
   const handleClearChat = () => {
     setMessages([
       {
-        id: 'welcome_new',
+        id: 'welcome_reset',
         role: 'model',
-        text: 'Chat history cleared. How may I help you explore Balingasag?',
+        text: 'Conversation reset. Welcome to Balingasag! How may I assist your travel plans today?',
         timestamp: Date.now(),
       },
     ]);
     toast.success('Chat history cleared');
   };
 
-  // Format cooldown display (e.g. 15s or 23h 59m)
   const formatCooldown = (seconds: number) => {
     if (seconds >= 3600) {
-      const hours = Math.floor(seconds / 3600);
+      const hrs = Math.floor(seconds / 3600);
       const mins = Math.floor((seconds % 3600) / 60);
-      return `${hours}h ${mins}m`;
+      return `${hrs}h ${mins}m`;
     }
     if (seconds >= 60) {
       const mins = Math.floor(seconds / 60);
@@ -333,29 +332,28 @@ export const TourismChatbot: React.FC = () => {
 
   return (
     <>
-      {/* FLOATING CHATBOT TRIGGER DOCK (Positioned directly UNDER the Back-to-Top Button) */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
-        {/* Animated Speech Bubble Callout (Typing / Thinking & Changing Text) */}
-        <AnimatePresence mode="wait">
+      {/* Floating Action Button (Positioned at bottom-6 right-6, directly under ScrollToTop) */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+        {/* Dynamic Animated Speech Bubble */}
+        <AnimatePresence>
           {!isOpen && (
             <motion.div
-              key={bubblePhase === 'thinking' ? 'thinking' : `text-${messageIndex}`}
-              initial={{ opacity: 0, x: 15, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -10, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.85, x: 10 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.85, x: 10 }}
               transition={{ duration: 0.25 }}
               onClick={() => setIsOpen(true)}
-              className="cursor-pointer group flex items-center select-none"
+              className="cursor-pointer select-none hidden sm:block"
             >
-              <div className="relative bg-[#1e2238] text-white px-4 py-2.5 rounded-2xl border border-slate-700/80 shadow-2xl flex items-center min-h-[44px]">
+              <div className="relative bg-[#0F172A] text-white px-4 py-2.5 rounded-2xl border border-slate-700/80 shadow-2xl flex items-center min-h-[44px]">
                 {/* Speech Bubble Tail pointing right towards the icon */}
-                <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[8px] border-l-[#1e2238]" />
+                <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[8px] border-l-[#0F172A]" />
 
                 {bubblePhase === 'thinking' ? (
                   <div className="flex items-center gap-1.5 px-3 py-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 animate-bounce" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 animate-bounce [animation-delay:0.4s]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]" />
                   </div>
                 ) : (
                   <p className="text-xs sm:text-sm font-semibold text-white tracking-tight leading-snug whitespace-nowrap">
@@ -367,19 +365,19 @@ export const TourismChatbot: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Circular Chatbot Button (Modern Bot Icon with Emerald Glowing Aesthetic) */}
+        {/* Circular Chatbot Button (Royal Cobalt Blue & Modern Bot Icon) */}
         <motion.button
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)}
           title="Balingasag AI Tourism Guide"
           aria-label="Toggle Tourism Chatbot"
-          className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 text-white shadow-2xl border-2 border-emerald-300/40 flex items-center justify-center group focus:outline-none shrink-0 relative"
+          className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white shadow-2xl border-2 border-blue-300/40 flex items-center justify-center group focus:outline-none shrink-0 relative"
         >
           {/* Glowing pulse ring */}
-          <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-25 animate-ping pointer-events-none" />
+          <span className="absolute inset-0 rounded-full bg-blue-400 opacity-25 animate-ping pointer-events-none" />
 
-          {/* New Modern Bot Icon */}
+          {/* Modern Bot Icon */}
           <Bot className="w-7 h-7 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
         </motion.button>
       </div>
@@ -392,12 +390,12 @@ export const TourismChatbot: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 30 }}
             transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-            className="fixed bottom-24 right-4 sm:right-6 z-50 w-[92vw] sm:w-[380px] md:w-[420px] h-[540px] max-h-[82vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
+            className="fixed bottom-24 right-4 sm:right-6 z-50 w-[94vw] sm:w-[390px] md:w-[420px] h-[550px] max-h-[84vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
           >
-            {/* Header */}
+            {/* Header (Midnight Slate + Royal Blue Accents) */}
             <div className="bg-slate-950 p-4 text-white flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-600/30 border border-emerald-500/40 text-emerald-400">
+                <div className="p-2 rounded-xl bg-blue-600/30 border border-blue-500/40 text-blue-400">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
@@ -405,7 +403,7 @@ export const TourismChatbot: React.FC = () => {
                     <h3 className="text-sm font-black tracking-tight text-white">
                       Balingasag AI Guide
                     </h3>
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30 font-bold">
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-500/30 font-bold">
                       Gemini 3.5
                     </span>
                   </div>
@@ -444,16 +442,16 @@ export const TourismChatbot: React.FC = () => {
                   >
                     <div
                       className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-white shadow-xs ${
-                        isUser ? 'bg-emerald-600' : 'bg-slate-900'
+                        isUser ? 'bg-blue-600' : 'bg-slate-900'
                       }`}
                     >
-                      {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-emerald-400" />}
+                      {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-blue-400" />}
                     </div>
 
                     <div
                       className={`max-w-[82%] p-3.5 rounded-2xl leading-relaxed ${
                         isUser
-                          ? 'bg-emerald-600 text-white rounded-tr-xs shadow-xs'
+                          ? 'bg-blue-600 text-white rounded-tr-xs shadow-xs'
                           : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs shadow-xs'
                       }`}
                     >
@@ -466,13 +464,13 @@ export const TourismChatbot: React.FC = () => {
               {/* Bot Typing Indicator */}
               {loading && (
                 <div className="flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-xl bg-slate-900 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="w-7 h-7 rounded-xl bg-slate-900 flex items-center justify-center text-blue-400 shrink-0">
                     <Bot className="w-4 h-4" />
                   </div>
                   <div className="bg-white p-3 rounded-2xl border border-slate-200 rounded-tl-xs flex items-center gap-1.5 shadow-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.4s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
                   </div>
                 </div>
               )}
@@ -480,21 +478,25 @@ export const TourismChatbot: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Suggestions (Shown when few messages) */}
-            {messages.length <= 3 && !loading && (
-              <div className="p-2.5 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto">
-                {SUGGESTIONS.map((sug, i) => (
+            {/* Basic FAQ Questions Chips (Token Saver & Instant Answers) */}
+            <div className="p-2.5 bg-slate-100/90 border-t border-slate-200 flex flex-col gap-1.5">
+              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-1">
+                <Zap className="w-3 h-3 text-blue-600" />
+                <span>Instant FAQs (0 Tokens Consumed):</span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                {BASIC_QUESTIONS.map((sug, i) => (
                   <button
                     key={i}
                     onClick={() => handleSend(sug)}
                     disabled={cooldownRemaining > 0}
-                    className="text-[11px] whitespace-nowrap px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 transition-colors shrink-0 disabled:opacity-50"
+                    className="text-[11px] whitespace-nowrap px-3 py-1 rounded-full bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-900 border border-slate-200/90 hover:border-blue-300 transition-all shrink-0 font-medium disabled:opacity-50 shadow-2xs"
                   >
                     {sug}
                   </button>
                 ))}
               </div>
-            )}
+            </div>
 
             {/* Input Bar: Buffer Countdown Displayed Directly in the Input Field */}
             <div className="p-3 bg-white border-t border-slate-200 space-y-1.5">
@@ -520,20 +522,20 @@ export const TourismChatbot: React.FC = () => {
                     placeholder={
                       cooldownRemaining > 0
                         ? `Locked for ${formatCooldown(cooldownRemaining)}...`
-                        : 'Ask about Balingasag spots (max 255 chars)...'
+                        : 'Ask about Balingasag (max 255 chars)...'
                     }
                     className={`w-full py-2.5 pl-3.5 pr-20 rounded-2xl text-xs border focus:outline-none transition-all ${
                       cooldownRemaining > 0
-                        ? 'border-amber-400 bg-amber-50/80 text-amber-900 font-semibold cursor-not-allowed select-none shadow-inner'
+                        ? 'border-blue-400 bg-blue-50/80 text-blue-950 font-semibold cursor-not-allowed select-none shadow-inner'
                         : input.length >= 250
-                        ? 'bg-slate-50 border-amber-400 focus:border-amber-500 text-slate-800'
-                        : 'bg-slate-50 border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 text-slate-800'
+                        ? 'bg-slate-50 border-blue-400 focus:border-blue-500 text-slate-800'
+                        : 'bg-slate-50 border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-500 text-slate-800'
                     }`}
                   />
 
                   {/* Right pill: Buffer countdown when active, or character counter */}
                   {cooldownRemaining > 0 ? (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-0.5 rounded-xl bg-amber-500 text-white font-mono font-black text-[11px] shadow-sm animate-pulse flex items-center gap-1 pointer-events-none">
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-0.5 rounded-xl bg-blue-600 text-white font-mono font-black text-[11px] shadow-sm animate-pulse flex items-center gap-1 pointer-events-none">
                       <Clock className="w-3 h-3 animate-spin [animation-duration:3s]" />
                       <span>{formatCooldown(cooldownRemaining)}</span>
                     </span>
@@ -541,9 +543,9 @@ export const TourismChatbot: React.FC = () => {
                     <span
                       className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono pointer-events-none ${
                         input.length >= 255
-                          ? 'text-red-600 font-bold'
+                          ? 'text-blue-700 font-bold'
                           : input.length >= 220
-                          ? 'text-amber-600 font-bold'
+                          ? 'text-blue-600 font-bold'
                           : 'text-slate-400'
                       }`}
                     >
@@ -555,14 +557,14 @@ export const TourismChatbot: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!input.trim() || cooldownRemaining > 0 || loading}
-                  className="p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 disabled:hover:bg-emerald-600 transition-all shadow-sm shrink-0"
+                  className="p-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:hover:bg-blue-600 transition-all shadow-sm shrink-0"
                   title="Send question"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </form>
 
-              {/* Token & Spam Rules Footnote */}
+              {/* Anti-spam rule note */}
               <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
                 <span>Anti-Spam: 15s • 1m • 24h buffer</span>
                 <span>Max 255 chars</span>

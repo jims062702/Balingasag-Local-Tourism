@@ -69,7 +69,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
         {/* Sticky Header with Title and Close Button */}
         <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
               {destination.category}
             </span>
             <span className="text-xs font-semibold text-slate-500">
@@ -109,7 +109,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
               <div className="absolute bottom-4 left-4 right-4 text-white">
                 <h1 className="text-2xl sm:text-3xl font-black">{destination.name}</h1>
                 <p className="text-xs sm:text-sm text-slate-200 mt-1 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
                   <span>
                     Barangay {destination.barangay}, Balingasag, Misamis Oriental (ZIP 9005)
                   </span>
@@ -126,7 +126,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
                     onClick={() => setActiveImage(img)}
                     className={`relative w-20 h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
                       activeImage === img
-                        ? 'border-emerald-500 scale-105 shadow-md'
+                        ? 'border-blue-500 scale-105 shadow-md'
                         : 'border-transparent opacity-70 hover:opacity-100'
                     }`}
                   >
@@ -144,10 +144,10 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
           {/* Destination Description */}
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Compass className="w-5 h-5 text-emerald-600" />
+              <Compass className="w-5 h-5 text-blue-600" />
               <span>Historical & Cultural Profile</span>
             </h2>
-            <div className="prose prose-slate max-w-none text-slate-700 text-sm leading-relaxed whitespace-pre-line">
+            <div className="prose pblue-slate max-w-none text-slate-700 text-sm leading-relaxed whitespace-pre-line">
               {destination.description}
             </div>
           </div>
@@ -157,19 +157,19 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
             <div className="space-y-4 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-emerald-600" />
+                  <Clock className="w-5 h-5 text-blue-600" />
                   <span>Recommended Explorer Itinerary</span>
                 </h2>
                 <span className="text-xs text-slate-500">Day Tour Guide</span>
               </div>
 
-              <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-emerald-200">
+              <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-blue-200">
                 {destination.itinerary.map((step, idx) => (
                   <div key={idx} className="relative group">
-                    <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-emerald-600 border-4 border-white shadow-xs flex items-center justify-center text-[10px] text-white font-bold" />
+                    <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-blue-600 border-4 border-white shadow-xs flex items-center justify-center text-[10px] text-white font-bold" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                           {step.time}
                         </span>
                         <h3 className="text-sm font-bold text-slate-900">{step.activity}</h3>
@@ -188,7 +188,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
           {destination.inclusions && destination.inclusions.length > 0 && (
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-teal-600" />
+                <CheckCircle className="w-5 h-5 text-blue-600" />
                 <span>Visitor Guidelines & Important Pointers</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -197,7 +197,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
                     key={idx}
                     className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3 text-xs text-slate-700"
                   >
-                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <CheckCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <span className="leading-relaxed">{item}</span>
                   </div>
                 ))}
@@ -210,7 +210,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
             {/* How to get there */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-                <Compass className="w-4 h-4 text-emerald-600" />
+                <Compass className="w-4 h-4 text-blue-600" />
                 <span>How to Get There</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
@@ -225,7 +225,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  <MapPin className="w-4 h-4 text-emerald-600" />
+                  <MapPin className="w-4 h-4 text-blue-600" />
                   <span>Location Coordinates</span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1">
@@ -242,7 +242,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
                 href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 hover:text-emerald-700 hover:border-emerald-500 text-xs font-bold transition-colors shadow-xs"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 hover:text-blue-700 hover:border-blue-500 text-xs font-bold transition-colors shadow-xs"
               >
                 <span>View Coordinates on Google Maps</span>
                 <ExternalLink className="w-3.5 h-3.5" />

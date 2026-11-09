@@ -8,7 +8,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        floral: '#FFFAF0',
+        paper: '#FAF7F2',
+        surface: '#FFFFFF',
+        ink: {
+          DEFAULT: '#18181B',
+          soft: '#52525B',
+          muted: '#71717A',
+        },
+        zalio: {
+          orange: '#FF5500',
+          darkOrange: '#E04B00',
+          peach: '#FFE7D6',
+        },
+        floral: '#FAF7F2',
         brand: {
           50: '#ecfdf5',
           100: '#d1fae5',
@@ -33,7 +45,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Onest', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
       }
     },
   },

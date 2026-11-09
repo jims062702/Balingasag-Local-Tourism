@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,15 +6,16 @@
 
 @layer base {
   body {
-    background-color: #FFFAF0;
-    @apply text-slate-900 font-sans antialiased;
+    background-color: #FAF7F2;
+    @apply text-stone-900 font-sans antialiased;
   }
 }
 
 /* Custom smooth scrolling */
 html {
   scroll-behavior: smooth;
-  background-color: #FFFAF0;
+  scroll-padding-top: 5rem;
+  background-color: #FAF7F2;
 }
 
 /* Custom scrollbars */
@@ -23,14 +24,14 @@ html {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f7f3ea;
+  background: #f4eee2;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #d6cebf;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #b8ad99;
 }
 
 @keyframes spin-slow {

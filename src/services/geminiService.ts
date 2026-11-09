@@ -1,10 +1,10 @@
 /**
  * Discover Balingasag — Gemini 3.5 Flash Lite Tourism AI Guide Service
  * Token-optimized, spam-buffered, strictly informational.
+ * Features an instant deterministic local FAQ cache to save 100% of tokens on basic queries.
  */
 
-const GEMINI_API_KEY =
-  import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const MODEL_NAME = 'gemini-3.5-flash-lite';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
@@ -98,7 +98,7 @@ export const checkSpamViolation = (
     if (newOffenses === 2) {
       bufferSec = 60; // 2nd time: 1 minute
     } else if (newOffenses >= 3) {
-      bufferSec = 24 * 60 * 60; // 3rd time: 24 hours (86,400s)
+      bufferSec = 86400; // 3rd time: 24 hours
     }
 
     const blockedUntil = now + bufferSec * 1000;
@@ -109,13 +109,11 @@ export const checkSpamViolation = (
       lastMessageText: trimmed,
     });
 
-    let reasonMsg = '';
-    if (newOffenses === 1) {
-      reasonMsg = 'Potential spam activity detected. Added 15-second cooldown buffer.';
-    } else if (newOffenses === 2) {
-      reasonMsg = 'Second spam offense detected. Added 1-minute cooldown buffer.';
-    } else {
-      reasonMsg = 'Third spam offense detected. Chat locked for 24 hours.';
+    let reasonMsg = `Spam buffer activated: 15s cooldown.`;
+    if (newOffenses === 2) {
+      reasonMsg = `Second notice: 1 minute cooldown applied.`;
+    } else if (newOffenses >= 3) {
+      reasonMsg = `Maximum spam limit exceeded: 24-hour buffer applied.`;
     }
 
     return {
@@ -150,7 +148,7 @@ Key Knowledge:
 - Developer & Creator: This platform is designed and developed by James Gasang (24-year-old Full-Stack & Back-End Developer from the Philippines, 4th year BSIT at Tagoloan Community College, portfolio: https://jamesgdev.vercel.app). When asked who made, developed, or engineered this website/portal, always mention James Gasang. If asked specifically "who is James Gasang", provide his background, expertise in full-stack web and AI systems, and link his portfolio.
 - Geography: 1st class coastal municipality in Northern Mindanao (Region X) on Macajalar Bay, facing Camiguin Island. 30 official barangays (6 Urban Poblacion, 11 Urbanizing, 13 Rural Upland).
 - Spanish Heritage: Vega Ancestral House (circa 1800s bahay-na-bato with famous hand-carved 'otí-ot' wooden caryatids), Santa Rita de Cascia Parish Church (1892 Jesuit brick sanctuary, feast day May 22), Bajo de Campana heritage zone.
-- Nature & Coast: Camuayan Natural Cold Springs & Mountain Waters (Barangay Camuayan features refreshing natural cold spring basins and aquifers, NOT waterfalls), Balingasag Coastal Baywalk, Balagnan Marine Sanctuary, Del Carmen Mangroves.
+- Nature & Coast: Camuayan Natural Cold Springs & Mountain Waters (Barangay Camuayan features refreshing natural cold spring basins and mountain spring waters, NOT waterfalls), Balingasag Coastal Baywalk, Balagnan Marine Sanctuary, Del Carmen Mangroves.
 - Delicacies: CASA Amante native cacao tablea, fresh dried danggit, regional seafood.
 - Hotlines: MDRRM 24/7 OPCEN: 0975-691-0090, PNP: 0998-598-6948, BFP: 0997-568-8288, Coast Guard: 0966-947-7077.
 Rules:
@@ -158,13 +156,13 @@ Rules:
 2. Max output is strictly concise to save tokens. Keep answers cheerful, polite, and helpful.`;
 
 /**
- * Checks if the user is asking about the developer or James Gasang.
- * Returns instant deterministic answer to save 100% of tokens and guarantee accuracy.
+ * Deterministic Local FAQ Knowledge Base.
+ * Catches common / basic questions to reply in < 10ms with ZERO Gemini API token consumption!
  */
-export const checkDeveloperQuery = (query: string): string | null => {
+export const checkDeterministicFaq = (query: string): string | null => {
   const q = query.toLowerCase().trim();
 
-  // Questions specifically asking "who is James Gasang"
+  // 1. James Gasang Developer Queries
   const isWhoIsJames =
     q.includes('who is james') ||
     q.includes('who is gasang') ||
@@ -177,7 +175,6 @@ export const checkDeveloperQuery = (query: string): string | null => {
     return JAMES_GASANG_BIO;
   }
 
-  // Questions asking about the developer/creator/builder/author/programmer
   const isDeveloperQuestion =
     q.includes('developer') ||
     q.includes('who made') ||
@@ -192,21 +189,100 @@ export const checkDeveloperQuery = (query: string): string | null => {
     return `Discover Balingasag was engineered and developed by James Gasang, a 24-year-old Full-Stack & Back-End Developer from the Philippines pursuing BSIT at Tagoloan Community College.\n\nYou can explore his engineering work and portfolio at: https://jamesgdev.vercel.app`;
   }
 
+  // 2. Emergency Hotlines
+  if (
+    q.includes('hotline') ||
+    q.includes('emergency') ||
+    q.includes('police') ||
+    q.includes('ambulance') ||
+    q.includes('fire department') ||
+    q.includes('contact number') ||
+    q.includes('rescue')
+  ) {
+    return `Here are the official 24/7 Emergency Hotlines in Balingasag:\n\n* **MDRRM 24/7 OPCEN:** 0975-691-0090 (TM)\n* **PNP Balingasag:** 0998-598-6948 (SMART) / 0927-512-1838 (TM)\n* **BFP Fire Station:** 0997-568-8288 (TM)\n* **Philippine Coast Guard:** 0966-947-7077 (TM)\n* **Municipal Health Office:** 0963-065-1678 (TNT)\n\nStay safe and keep these numbers on hand!`;
+  }
+
+  // 3. Camuayan Cold Springs
+  if (
+    q.includes('camuayan') ||
+    q.includes('cold spring') ||
+    q.includes('falls') ||
+    q.includes('waterfall')
+  ) {
+    return `In Barangay Camuayan, visitors enjoy the **Camuayan Natural Cold Springs & Mountain Waters**! Please note: Camuayan features crystal-clear natural mountain cold spring basins and aquifers (not waterfalls). It is a refreshing eco-tourism getaway surrounded by lush foliage.`;
+  }
+
+  // 4. Vega Ancestral House
+  if (
+    q.includes('vega') ||
+    q.includes('ancestral house') ||
+    q.includes('oti-ot') ||
+    q.includes('oti ot')
+  ) {
+    return `The **Vega Ancestral House** is a 200-year-old Spanish-era bahay-na-bato located at Poblacion, Balingasag. It is renowned for its hand-carved wooden caryatids ('otí-ot') and rich historical role in Misamis Oriental heritage.`;
+  }
+
+  // 5. Top Tourism Spots
+  if (
+    q.includes('top spot') ||
+    q.includes('must visit') ||
+    q.includes('attractions') ||
+    q.includes('places to visit') ||
+    q.includes('where to go') ||
+    q.includes('what to see') ||
+    q.includes('best spot')
+  ) {
+    return `Here are the top must-visit attractions in Balingasag:\n\n1. **Vega Ancestral House** — 200-year-old Spanish colonial landmark in Poblacion.\n2. **Santa Rita de Cascia Parish Church** — 1892 Jesuit brickwork sanctuary.\n3. **Camuayan Natural Cold Springs** — Pure refreshing mountain cold spring basins.\n4. **Macajalar Coastal Baywalk** — Scenic seaside promenade facing Camiguin.\n5. **Balagnan Marine Sanctuary** — Protected coastal coral and reef haven.\n\nBrowse the 'Tourism spots' section on our portal to view complete guides for all 30 barangays!`;
+  }
+
+  // 6. How to Get There / Transportation
+  if (
+    q.includes('how to get') ||
+    q.includes('how to go') ||
+    q.includes('commute') ||
+    q.includes('direction') ||
+    q.includes('bus') ||
+    q.includes('van')
+  ) {
+    return `**How to Reach Balingasag:**\n\n* **From Cagayan de Oro City (Agora Terminal):** Ride any northbound bus (Rural Transit / Bachelor Express) or passenger van bound for Gingoog, Butuan, or Balingasag.\n* **Travel Time:** Approx. 1.5 to 2 hours along the paved Butuan-CDO-Iligan national highway.\n* **Drop-off:** Balingasag Bus Terminal or Poblacion Town Center.`;
+  }
+
+  // 7. Town Fiesta & Festivals
+  if (
+    q.includes('fiesta') ||
+    q.includes('festival') ||
+    q.includes('feast day') ||
+    q.includes('lambangus') ||
+    q.includes('sakay-sakay')
+  ) {
+    return `* **Annual Town Fiesta:** Celebrated every **May 22** in honor of patron saint **Santa Rita de Cascia**.\n* **Lambangus Festival:** Held every January, celebrating Balingasag's thriving milkfish (bangus) aquaculture with vibrant street dancing and culinary festivities!`;
+  }
+
+  // 8. Mayor & LGU Officials
+  if (
+    q.includes('mayor') ||
+    q.includes('vice mayor') ||
+    q.includes('officials') ||
+    q.includes('council')
+  ) {
+    return `The municipal government of Balingasag is led by:\n\n* **Municipal Mayor:** Hon. Alexis S. Moreno\n* **Vice Mayor:** Hon. John D. Valledor\n* Supported by the 10 members of the Sangguniang Bayan presiding from the Legislative Building at Poblacion.`;
+  }
+
   return null;
 };
 
 /**
  * Calls Gemini 3.5 Flash Lite with token-saving constraints.
- * Restricts conversation memory to the latest 2 turns.
+ * First checks the deterministic local FAQ cache to save 100% of tokens.
  */
 export const sendGeminiChatMessage = async (
   userMessage: string,
   history: ChatMessage[]
 ): Promise<string> => {
-  // 1. Instant deterministic answer for developer / James Gasang queries (Saves 100% of tokens)
-  const developerDirectAnswer = checkDeveloperQuery(userMessage);
-  if (developerDirectAnswer) {
-    return developerDirectAnswer;
+  // 1. Instant deterministic answer for basic / FAQ queries (Saves 100% of tokens)
+  const deterministicAnswer = checkDeterministicFaq(userMessage);
+  if (deterministicAnswer) {
+    return deterministicAnswer;
   }
 
   // Prune history to the last 2 exchanges to preserve tokens
@@ -230,7 +306,7 @@ export const sendGeminiChatMessage = async (
     contents,
     generationConfig: {
       temperature: 0.6,
-      maxOutputTokens: 350, // token saving while accommodating full local guidance
+      maxOutputTokens: 250, // strictly concise to save tokens
       topP: 0.8,
     },
   };

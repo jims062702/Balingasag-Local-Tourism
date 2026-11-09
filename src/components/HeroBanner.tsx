@@ -5,12 +5,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Compass,
-  AlertTriangle,
-  Clock,
+  Building2,
+  Users,
 } from 'lucide-react';
 import { CarouselSlide } from '../types';
 import { INITIAL_CAROUSEL_SLIDES } from '../data/initialData';
+import { getHeroOptimizedUrl } from '../services/cloudinary';
 
 interface HeroBannerProps {
   slides?: CarouselSlide[];
@@ -24,7 +24,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
   const currentSlides = activeSlides.length > 0 ? activeSlides : INITIAL_CAROUSEL_SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [phTime, setPhTime] = useState('');
 
   // Real-time Philippine Standard Time (PST, UTC+8) Live Digital Clock
@@ -58,14 +57,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentSlides.length]);
 
-  // Automatically cycle slides every 3 seconds
+  // Automatically cycle slides every 3 seconds (strictly continuous, never paused)
   useEffect(() => {
-    if (isPaused) return;
+    if (currentSlides.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % currentSlides.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, [isPaused, currentSlides.length]);
+  }, [currentSlide, currentSlides.length]);
 
   // Reset currentSlide if array length shrinks
   useEffect(() => {
@@ -82,8 +81,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
     setCurrentSlide((prev) => (prev - 1 + currentSlides.length) % currentSlides.length);
   };
 
-  const scrollToDestinations = () => {
-    const el = document.getElementById('destinations');
+  const scrollToDemographics = () => {
+    const el = document.getElementById('demographics');
+    el?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToLGUOfficials = () => {
+    const el = document.getElementById('lgu-officials');
     el?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -92,40 +96,42 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
   return (
     <section
       id="hero"
-      className="relative min-h-[88vh] sm:min-h-[92vh] flex items-center overflow-hidden bg-slate-950 text-white"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      className="relative w-full h-screen min-h-[680px] flex items-center overflow-hidden bg-slate-950 text-white"
     >
-      {/* Background Smooth Carousel with Ken Burns Zoom Transition */}
+      {/* Background Smooth Carousel (High-Resolution & AI Sharpened via Cloudinary) */}
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeSlideData.id || currentSlide}
-            initial={{ opacity: 0, scale: 1.06 }}
-            animate={{ opacity: 1, scale: 1.0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.0, ease: [0.25, 0.1, 0.25, 1.0] }}
-            className="absolute inset-0"
+            transition={{ duration: 0.8, ease: 'easeInOut' }}
+            className="absolute inset-0 transform-gpu"
           >
             <img
-              src={activeSlideData.imageUrl}
+              src={getHeroOptimizedUrl(activeSlideData.imageUrl)}
               alt={activeSlideData.title}
               className="w-full h-full object-cover object-center"
+              style={{
+                imageRendering: 'auto',
+                WebkitBackfaceVisibility: 'hidden',
+                backfaceVisibility: 'hidden',
+                transform: 'translateZ(0)',
+              }}
+              loading="eager"
             />
           </motion.div>
         </AnimatePresence>
 
-        {/* Refined Vignette Overlays: Balanced contrast so photos remain vivid, text is crisp */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/65 to-slate-950/25" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/40" />
+        {/* Subtle Vignette Overlays: Maximizes carousel image space & clarity while ensuring text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/45 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-slate-950/30 pointer-events-none" />
       </div>
 
       {/* Clean Foreground Hero Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 py-16 sm:py-24 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 pt-28 sm:pt-32 pb-20 w-full">
         <div className="max-w-2xl space-y-6 text-left">
-          {/* LGU Official Badge with PST Clock */}
-          
-
           {/* Main Heading */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -135,7 +141,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
             className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.12]"
           >
             Discover the Heritage &amp; Natural Wonders of{' '}
-            <span className="text-emerald-400">
+            <span className="text-blue-400">
               Balingasag
             </span>
           </motion.h1>
@@ -149,12 +155,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
             className="text-base sm:text-lg text-slate-200 font-normal leading-relaxed"
           >
             Immerse yourself in the heart of Balingasag. Explore the living history of the legendary Vega
-             Ancestral House and ancestral brick sanctuaries, or chase the refreshing crystal-clear waters
-              of Camuayan Cold Springs alongside the stunning sunsets of Macajalar Baywalk.
-               A curated, community-driven guide crafted purely for authentic local exploration.
+            Ancestral House and ancestral brick sanctuaries, or chase the refreshing crystal-clear waters
+            of Camuayan Natural Cold Springs alongside the stunning sunsets of Macajalar Baywalk.
+            A curated, community-driven guide crafted purely for authentic local exploration.
           </motion.p>
 
-          {/* Primary Action Buttons (Clean & purposeful) */}
+          {/* Primary Action Buttons (Municipal Profile & LGU Officials) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -163,20 +169,20 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
             className="flex items-center gap-3.5 pt-2 flex-wrap"
           >
             <button
-              onClick={scrollToDestinations}
-              className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-emerald-950/50 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95 group"
+              onClick={scrollToDemographics}
+              className="px-6 py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-950/50 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95 group"
             >
-              <Compass className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
-              <span>Explore Tourism Spots</span>
+              <Building2 className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+              <span>Municipal profile</span>
             </button>
 
-            <a
-              href="#weather-advisories"
-              className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white font-semibold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95"
+            <button
+              onClick={scrollToLGUOfficials}
+              className="px-6 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white font-semibold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95"
             >
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>Live Weather &amp; Advisories</span>
-            </a>
+              <Users className="w-4 h-4 text-blue-400" />
+              <span>LGU officials</span>
+            </button>
           </motion.div>
         </div>
       </div>
@@ -191,7 +197,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <span className="font-mono text-[11px] font-bold text-emerald-300 tracking-wider">
+        <span className="font-mono text-[11px] font-bold text-blue-400 tracking-wider">
           {String(currentSlide + 1).padStart(2, '0')} / {String(currentSlides.length).padStart(2, '0')}
         </span>
 
@@ -207,14 +213,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
       {/* Centered Scroll Down Arrow */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
         <button
-          onClick={scrollToDestinations}
-          aria-label="Scroll down to Tourism Spots"
+          onClick={scrollToDemographics}
+          aria-label="Scroll down to Municipal Profile"
           className="flex flex-col items-center gap-0.5 group text-slate-400 hover:text-white transition-colors focus:outline-none"
         >
-          <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400/90 group-hover:text-emerald-300 transition-colors">
+          <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 group-hover:text-blue-400 transition-colors">
             Scroll to Explore
           </span>
-          <ChevronDown className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 animate-bounce" />
+          <ChevronDown className="w-5 h-5 text-blue-400 group-hover:text-blue-300 animate-bounce" />
         </button>
       </div>
     </section>

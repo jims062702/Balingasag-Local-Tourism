@@ -32,7 +32,6 @@ import { ScrollToTop } from './components/ScrollToTop';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Footer } from './components/Footer';
 import { CommandPalette } from './components/CommandPalette';
-import { SavedTripsDrawer } from './components/SavedTripsDrawer';
 import { TourismChatbot } from './components/TourismChatbot';
 
 export const App: React.FC = () => {
@@ -40,47 +39,8 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'landing' | 'detail' | 'admin'>('landing');
   const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
 
-  // Command Palette & Saved Wishlist Drawers
+  // Command Palette
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [savedTripsOpen, setSavedTripsOpen] = useState(false);
-  const [savedSpotIds, setSavedSpotIds] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem('balingasag_saved_spots');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const handleToggleSaveSpot = (destId: string) => {
-    setSavedSpotIds((prev) => {
-      const exists = prev.includes(destId);
-      let next: string[];
-      if (exists) {
-        next = prev.filter((id) => id !== destId);
-        toast.success('Removed from your trip wishlist', { icon: '🤍' });
-      } else {
-        next = [...prev, destId];
-        toast.success('Added to your trip wishlist! ❤️');
-      }
-      try {
-        localStorage.setItem('balingasag_saved_spots', JSON.stringify(next));
-      } catch (e) {
-        console.error(e);
-      }
-      return next;
-    });
-  };
-
-  const handleClearSavedSpots = () => {
-    setSavedSpotIds([]);
-    try {
-      localStorage.removeItem('balingasag_saved_spots');
-    } catch (e) {
-      console.error(e);
-    }
-    toast.success('Wishlist cleared');
-  };
 
   // Active Section for Scroll-Spy
   const [activeSection, setActiveSection] = useState<string>('hero');
@@ -228,7 +188,7 @@ export const App: React.FC = () => {
   const currentDestination = destinations.find((d) => d.id === selectedDestinationId) || destinations[0];
 
   return (
-    <div className="min-h-screen bg-[#FFFAF0] font-sans text-slate-900 flex flex-col selection:bg-emerald-600 selection:text-white">
+    <div className="min-h-screen bg-[#FAF7F2] font-sans text-stone-900 flex flex-col selection:bg-blue-600 selection:text-white">
       {/* Toast Notifications Provider */}
       <Toaster
         position="top-right"
@@ -242,7 +202,7 @@ export const App: React.FC = () => {
           },
           success: {
             iconTheme: {
-              primary: '#10b981',
+              primary: '#2563EB',
               secondary: '#ffffff',
             },
           },
@@ -275,8 +235,6 @@ export const App: React.FC = () => {
             isDetailPage={true}
             onBackToHome={handleBackToHome}
             onOpenSearch={() => setCommandPaletteOpen(true)}
-            onOpenSavedTrips={() => setSavedTripsOpen(true)}
-            savedCount={savedSpotIds.length}
           />
           <main className="flex-1">
             <DestinationDetailPage
@@ -284,8 +242,6 @@ export const App: React.FC = () => {
               allDestinations={destinations}
               onBack={handleBackToHome}
               onSelectDestination={handleSelectDestination}
-              isSaved={savedSpotIds.includes(currentDestination.id)}
-              onToggleSave={handleToggleSaveSpot}
             />
           </main>
           <Footer />
@@ -300,8 +256,6 @@ export const App: React.FC = () => {
             onOpenAdmin={handleOpenAdmin}
             isAdminLoggedIn={isAdminLoggedIn}
             onOpenSearch={() => setCommandPaletteOpen(true)}
-            onOpenSavedTrips={() => setSavedTripsOpen(true)}
-            savedCount={savedSpotIds.length}
           />
 
           <main className="flex-1">
@@ -326,8 +280,6 @@ export const App: React.FC = () => {
               setSelectedBarangay={setSelectedBarangay}
               onSelectDestination={handleSelectDestination}
               loading={loading}
-              savedSpotIds={savedSpotIds}
-              onToggleSave={handleToggleSaveSpot}
             />
 
             {/* 3. WEATHER & ADVISORIES SECTION */}
@@ -369,16 +321,6 @@ export const App: React.FC = () => {
         }}
         onNavigateSection={handleNavigateSection}
         onOpenAdmin={handleOpenAdmin}
-      />
-
-      {/* SAVED DAY-TRIP WISHLIST DRAWER */}
-      <SavedTripsDrawer
-        isOpen={savedTripsOpen}
-        onClose={() => setSavedTripsOpen(false)}
-        savedSpots={destinations.filter((d) => savedSpotIds.includes(d.id))}
-        onRemoveSpot={handleToggleSaveSpot}
-        onClearAll={handleClearSavedSpots}
-        onSelectDestination={handleSelectDestination}
       />
 
       {/* GEMINI AI TOURISM CHATBOT (Max 255 chars, Token-optimized, Progressive Anti-Spam Buffers) */}

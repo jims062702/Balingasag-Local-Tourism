@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, useScroll, useSpring } from 'framer-motion';
-import { User, Menu, X, Landmark } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Menu, X, ArrowRight } from 'lucide-react';
 import { isFirebaseConfigured } from '../services/firebase';
 
 interface NavbarProps {
@@ -11,8 +11,6 @@ interface NavbarProps {
   isDetailPage?: boolean;
   onBackToHome?: () => void;
   onOpenSearch?: () => void;
-  onOpenSavedTrips?: () => void;
-  savedCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -25,19 +23,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const firebaseReady = isFirebaseConfigured();
-
-  // Scroll Progress Tracking for the Top Aesthetic Reading Bar
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 30,
-    restDelta: 0.001,
-  });
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 25);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -55,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setMobileMenuOpen(false);
   };
 
-  // Requested navlinks without icons
+  // Navlinks matching exact prompt requirements (text only)
   const navLinks = [
     { id: 'hero', label: 'Home' },
     { id: 'destinations', label: 'Tourism spots' },
@@ -66,135 +55,143 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <header
-      className={`sticky top-0 z-40 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-slate-950/95 backdrop-blur-md border-b border-white/10 shadow-lg py-2.5'
-          : 'bg-slate-950/85 backdrop-blur-sm border-b border-white/10 py-3'
-      }`}
-    >
-      {/* Top Scroll Reading Progress Bar with Emerald Glow */}
-      <motion.div
-        style={{ scaleX }}
-        className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 origin-left z-50 pointer-events-none shadow-[0_0_10px_rgba(52,211,153,0.8)]"
-      />
-
-      {/* Maximum space utilization: px-4 sm:px-6 lg:px-8 without excessive margin */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo & Municipal Text on the LEFT SIDE (Using space efficiently, no oversized margin) */}
+    <header className="fixed top-3 sm:top-5 left-0 right-0 z-50 w-full px-3 sm:px-6 pointer-events-none transition-all duration-300">
+      <div className="max-w-7xl mx-auto">
+        {/* Floating Capsule / Pill Navbar (No Overlap, Responsive, Generous Padding) */}
+        <nav
+          className={`pointer-events-auto rounded-full bg-white/95 backdrop-blur-md border border-stone-200/90 transition-all duration-300 px-3.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 ${
+            isScrolled
+              ? 'shadow-[0_12px_36px_rgba(0,0,0,0.08)] border-stone-300/80'
+              : 'shadow-[0_8px_28px_rgba(0,0,0,0.04)]'
+          }`}
+          aria-label="Main navigation"
+        >
+          {/* Brand Mark (Official Balingasag Seal with transparent background + Discover Balingasag) */}
           <div
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0 select-none min-w-0"
             onClick={() => handleLinkClick('hero')}
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 p-0.5 shadow-sm group-hover:scale-105 transition-transform shrink-0">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Landmark className="w-5 h-5 text-emerald-400" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-base sm:text-lg font-black tracking-tight text-white group-hover:text-emerald-300 transition-colors whitespace-nowrap">
-                  Discover Balingasag
-                </span>
-              </div>
-              <p className="hidden sm:block text-[10px] text-slate-400 font-medium leading-none mt-0.5">
-                LGU Tourism Portal • Misamis Oriental
-              </p>
-            </div>
+            <img
+              src="/balingasag-seal.png"
+              alt="Official Seal of Balingasag"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0 group-hover:scale-105 transition-transform"
+            />
+
+            <span className="text-sm sm:text-base xl:text-lg font-black tracking-tight text-stone-900 group-hover:text-blue-700 transition-colors whitespace-nowrap truncate">
+              Discover Balingasag
+            </span>
           </div>
 
-          {/* Desktop Navlinks (Text only, Underline indicator under active section) */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+          {/* Desktop Navlinks with 30% Active Underline (Fluid, no overflow) */}
+          <div className="hidden lg:flex items-center gap-1 xl:gap-3 2xl:gap-5 flex-1 justify-center px-2">
             {navLinks.map((link) => {
               const isActive = !isDetailPage && activeSection === link.id;
               return (
                 <button
                   key={link.id}
                   onClick={() => handleLinkClick(link.id)}
-                  className={`relative px-3 py-2 text-xs font-bold transition-colors whitespace-nowrap focus:outline-none ${
+                  className={`relative px-2 py-1.5 text-xs xl:text-[13px] tracking-tight transition-colors whitespace-nowrap flex flex-col items-center focus:outline-none shrink-0 ${
                     isActive
-                      ? 'text-emerald-400 font-extrabold'
-                      : 'text-slate-300 hover:text-white'
+                      ? 'text-stone-950 font-bold'
+                      : 'text-stone-600 hover:text-stone-950 font-medium'
                   }`}
                 >
                   <span>{link.label}</span>
                   {isActive && (
-                    <motion.div
+                    <motion.span
                       layoutId="navActiveUnderline"
-                      className="absolute -bottom-1 left-2.5 right-2.5 h-[2.5px] bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)]"
+                      className="absolute -bottom-1 h-[2.5px] w-[32%] rounded-full bg-blue-600 shadow-xs"
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
                 </button>
               );
             })}
+          </div>
 
-            <div className="h-4 w-px bg-white/20 mx-2" />
+          {/* Right Action Group: Pill CTA Button & Admin Portal trigger */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Pill CTA Button: Hidden on phone (<640px) to prevent mobile crowding; visible on tablet/desktop */}
+            <button
+              onClick={() => handleLinkClick('destinations')}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3.5 sm:px-4 xl:px-5 py-2 text-xs xl:text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs hover:shadow transition-all group shrink-0"
+            >
+              <span>Explore Spots</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
 
-            {/* ADMIN PORTAL: USER ICON BUTTON (Prompt Requirement) */}
+            {/* Admin Portal User Button */}
             <button
               onClick={onOpenAdmin}
-              title={isAdminLoggedIn ? 'LGU Admin CMS (Active)' : 'LGU Admin Portal Login'}
+              title={isAdminLoggedIn ? 'LGU Admin CMS (Active)' : 'LGU Admin Portal'}
               aria-label="Admin Portal"
-              className={`p-2 rounded-xl transition-all shadow-sm flex items-center justify-center group relative ${
+              className={`p-1.5 sm:p-2 rounded-full border transition-all flex items-center justify-center shrink-0 relative ${
                 isAdminLoggedIn
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-400/50'
-                  : 'bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white border border-white/20'
+                  ? 'bg-blue-50 border-blue-300 text-blue-800'
+                  : 'bg-stone-50 hover:bg-stone-100 border-stone-200 text-stone-600 hover:text-stone-900'
               }`}
             >
-              <User className="w-4 h-4 text-emerald-300 group-hover:scale-110 transition-transform" />
+              <User className="w-4 h-4" />
               {isAdminLoggedIn && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white" />
               )}
             </button>
-          </nav>
 
-          {/* Mobile Menu & User Icon for Mobile (Clean without search and wishlist) */}
-          <div className="lg:hidden flex items-center gap-2">
-            {/* User Icon for Mobile Admin */}
-            <button
-              onClick={onOpenAdmin}
-              title="Admin Portal"
-              className="p-2 rounded-xl bg-white/10 text-slate-200 hover:text-white border border-white/20"
-            >
-              <User className="w-4 h-4 text-emerald-400" />
-            </button>
-
-            {/* Hamburger Button */}
+            {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl bg-white/10 text-slate-200 hover:text-white focus:outline-none"
+              className="lg:hidden p-1.5 sm:p-2 rounded-full border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-stone-950 focus:outline-none shrink-0"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
-        </div>
-      </div>
+        </nav>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-slate-950/98 border-b border-white/10 px-4 pt-3 pb-6 space-y-1.5 animate-in slide-in-from-top-2 duration-150">
-          {navLinks.map((link) => {
-            const isActive = !isDetailPage && activeSection === link.id;
-            return (
-              <button
-                key={link.id}
-                onClick={() => handleLinkClick(link.id)}
-                className={`w-full text-left px-3.5 py-2.5 text-xs font-bold transition-colors flex items-center justify-between border-b ${
-                  isActive
-                    ? 'text-emerald-400 border-emerald-400 font-extrabold'
-                    : 'text-slate-300 border-slate-800/60 hover:text-white'
-                }`}
-              >
-                <span>{link.label}</span>
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
+        {/* Mobile Menu Drawer (Responsive floating card under navbar) */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="pointer-events-auto mt-2 p-3 sm:p-4 bg-white/98 backdrop-blur-md rounded-3xl border border-stone-200/90 shadow-2xl space-y-1.5 lg:hidden"
+            >
+              {navLinks.map((link) => {
+                const isActive = !isDetailPage && activeSection === link.id;
+                return (
+                  <button
+                    key={link.id}
+                    onClick={() => handleLinkClick(link.id)}
+                    className={`w-full text-left px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-between ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-900 font-bold'
+                        : 'text-stone-600 hover:bg-stone-50 hover:text-stone-950'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    {isActive && (
+                      <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Mobile CTA Button inside Drawer */}
+              <div className="pt-2">
+                <button
+                  onClick={() => handleLinkClick('destinations')}
+                  className="w-full py-2.5 px-4 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
+                >
+                  <span>Explore All Tourism Spots</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </header>
   );
 };

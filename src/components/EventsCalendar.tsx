@@ -64,50 +64,38 @@ export const EventsCalendar: React.FC = () => {
   });
 
   return (
-    <section className="py-16 bg-[#FFFAF0] text-slate-900 border-t border-amber-900/10" id="events-calendar">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Header */}
+    <section className="py-20 bg-[#FAF7F2] text-stone-900 border-t border-stone-200/80" id="events-calendar">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* Header matching zalio.ai */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 0.5 }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-amber-900/10"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-stone-200/80"
         >
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100 text-teal-800 text-xs font-bold mb-2">
-              <CalendarIcon className="w-3.5 h-3.5 text-teal-700" />
-              <span>Municipal Calendar</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Festivals &amp; Events
+            <h2 className="text-3xl sm:text-4xl font-black text-stone-900 tracking-tight">
+              Festivals &amp; Town Events
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-stone-600 mt-1 max-w-xl">
               Experience the vibrant traditions of Balingasag — from the Lambangus street dances to
               the coastal Sakay-Sakay fluvial parade.
             </p>
           </div>
 
-          {/* Search & Refresh */}
+          {/* Search */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search festival..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white rounded-xl text-xs sm:text-sm border border-slate-300 focus:outline-none focus:border-teal-600 shadow-xs"
+                className="pl-9 pr-4 py-2 bg-white rounded-full text-xs sm:text-sm border border-stone-200/90 focus:outline-none focus:border-stone-900 shadow-xs"
               />
             </div>
-
-            <button
-              onClick={loadEventsData}
-              title="Reload events from Firestore"
-              className="p-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
           </div>
         </motion.div>
 
@@ -117,16 +105,16 @@ export const EventsCalendar: React.FC = () => {
             <button
               key={cat}
               onClick={() => setFilterCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 filterCategory === cat
-                  ? 'bg-teal-700 text-white shadow-xs'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  ? 'bg-stone-900 text-white shadow-xs'
+                  : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
               }`}
             >
               {cat}
             </button>
           ))}
-          <span className="text-xs text-slate-500 ml-2">
+          <span className="text-xs text-stone-500 ml-2">
             {filteredEvents.length} scheduled
           </span>
         </div>
@@ -163,7 +151,7 @@ export const EventsCalendar: React.FC = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: false, amount: 0.15 }}
                   transition={{ duration: 0.5, delay: (idx % 2) * 0.1 }}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-200 hover:border-teal-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                  className="bg-white rounded-3xl overflow-hidden border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
                 >
                   <div>
                     {/* Event Image Banner */}
@@ -178,7 +166,7 @@ export const EventsCalendar: React.FC = () => {
 
                       {/* Date Pill Top Right */}
                       <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl shadow-md border border-white/20 text-slate-900 text-center">
-                        <div className="text-[10px] uppercase font-bold text-teal-700 tracking-wider">
+                        <div className="text-[10px] uppercase font-bold text-blue-700 tracking-wider">
                           Date
                         </div>
                         <div className="text-xs font-black">{event.date}</div>
@@ -194,7 +182,7 @@ export const EventsCalendar: React.FC = () => {
                       {/* Bottom Location */}
                       <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white text-xs">
                         <div className="flex items-center gap-1.5 font-semibold bg-black/50 backdrop-blur-md px-3 py-1 rounded-full">
-                          <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                          <MapPin className="w-3.5 h-3.5 text-blue-400" />
                           <span>{event.location}</span>
                         </div>
                       </div>
@@ -208,12 +196,12 @@ export const EventsCalendar: React.FC = () => {
 
                       <div className="mt-2 flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                         <span className="flex items-center gap-1 font-semibold text-slate-700">
-                          <MapPin className="w-3.5 h-3.5 text-teal-600" />
+                          <MapPin className="w-3.5 h-3.5 text-blue-600" />
                           Brgy. {event.barangay}
                         </span>
                         {event.time && (
                           <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-teal-600" />
+                            <Clock className="w-3.5 h-3.5 text-blue-600" />
                             {event.time}
                           </span>
                         )}
@@ -236,7 +224,7 @@ export const EventsCalendar: React.FC = () => {
                       href={generateGoogleCalendarUrl(event)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-teal-50 hover:bg-teal-600 text-teal-800 hover:text-white font-bold text-[11px] transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white font-bold text-[11px] transition-colors"
                       title="Add to Google Calendar"
                     >
                       <CalendarPlus className="w-3.5 h-3.5" />

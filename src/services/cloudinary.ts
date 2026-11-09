@@ -46,6 +46,36 @@ export const getCloudinaryConfig = () => {
 };
 
 /**
+ * Generates an ultra-crisp, high-definition (HD 1920px) Cloudinary URL specifically
+ * designed for full-screen hero carousels and banners.
+ * Automatically upscales, sharpens (e_sharpen:120), and delivers at best quality.
+ */
+export const getHeroOptimizedUrl = (url: string): string => {
+  if (!url) return '';
+
+  // Cloudinary: inject 1920px width, smart fill, auto gravity, best quality, and sharpness
+  if (url.includes('res.cloudinary.com')) {
+    const uploadIndex = url.indexOf('/upload/');
+    if (uploadIndex !== -1) {
+      // Remove any existing transformations between /upload/ and /v...
+      const afterUpload = url.slice(uploadIndex + 8);
+      const versionIndex = afterUpload.search(/v\d+\//);
+      const cleanPath = versionIndex !== -1 ? afterUpload.slice(versionIndex) : afterUpload;
+      const transform = 'w_1920,c_fill,g_auto,q_auto:best,f_auto,e_sharpen:120';
+      return `${url.slice(0, uploadIndex)}/upload/${transform}/${cleanPath}`;
+    }
+  }
+
+  // Unsplash: request 1920px high-resolution parameters
+  if (url.includes('images.unsplash.com')) {
+    const base = url.split('?')[0];
+    return `${base}?auto=format&fit=crop&w=1920&q=90`;
+  }
+
+  return url;
+};
+
+/**
  * Generates an optimized Cloudinary thumbnail or transforms an external image URL
  */
 export const getOptimizedMediaUrl = (

@@ -42,7 +42,7 @@ export const ScrollToTop: React.FC = () => {
           onClick={scrollToTop}
           title={`Scroll to top (${Math.round(scrollProgress)}% viewed)`}
           aria-label="Scroll to top of page"
-          className="fixed bottom-24 right-6 z-40 p-2 rounded-full bg-slate-900/90 text-white shadow-2xl backdrop-blur-md border border-emerald-500/30 flex items-center justify-center group focus:outline-none"
+          className="fixed bottom-24 right-6 z-40 p-2 rounded-full bg-stone-950/90 text-white shadow-2xl backdrop-blur-md border border-stone-700/60 flex items-center justify-center group focus:outline-none"
         >
           {/* Progress Circle SVG */}
           <svg className="w-12 h-12 transform -rotate-90 pointer-events-none" viewBox="0 0 48 48">
@@ -51,7 +51,7 @@ export const ScrollToTop: React.FC = () => {
               cx="24"
               cy="24"
               r={radius}
-              className="text-slate-800"
+              className="text-stone-800"
               strokeWidth="3.5"
               stroke="currentColor"
               fill="transparent"
@@ -61,7 +61,7 @@ export const ScrollToTop: React.FC = () => {
               cx="24"
               cy="24"
               r={radius}
-              className="text-emerald-400 transition-all duration-150"
+              className="text-blue-500 transition-all duration-150"
               strokeWidth="3.5"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
@@ -73,7 +73,7 @@ export const ScrollToTop: React.FC = () => {
 
           {/* Centered Arrow Icon */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <ArrowUp className="w-5 h-5 text-emerald-300 group-hover:text-white transition-colors group-hover:-translate-y-0.5 duration-200" />
+            <ArrowUp className="w-5 h-5 text-stone-200 group-hover:text-white transition-colors group-hover:-translate-y-0.5 duration-200" />
           </div>
         </motion.button>
       )}

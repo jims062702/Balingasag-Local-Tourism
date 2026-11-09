@@ -120,7 +120,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         >
           {/* Search Input Bar */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200 bg-slate-50/50">
-            <Search className="w-5 h-5 text-emerald-600 shrink-0" />
+            <Search className="w-5 h-5 text-blue-600 shrink-0" />
             <input
               type="text"
               autoFocus
@@ -151,7 +151,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {results.destinations.length > 0 && (
               <div>
                 <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 py-1 flex items-center gap-1.5">
-                  <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                  <Compass className="w-3.5 h-3.5 text-blue-600" />
                   <span>Tourism Spots ({results.destinations.length})</span>
                 </div>
                 <div className="space-y-1 mt-1">
@@ -162,7 +162,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onSelectDestination(dest.id);
                         onClose();
                       }}
-                      className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-emerald-50 text-left transition-colors group"
+                      className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-blue-50 text-left transition-colors group"
                     >
                       <div className="flex items-center gap-3">
                         <img
@@ -171,7 +171,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           className="w-10 h-10 rounded-xl object-cover shrink-0"
                         />
                         <div>
-                          <div className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-700">
+                          <div className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-700">
                             {dest.name}
                           </div>
                           <div className="text-[11px] text-slate-500">
@@ -179,7 +179,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           </div>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-transform" />
                     </button>
                   ))}
                 </div>
@@ -190,7 +190,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {results.barangays.length > 0 && (
               <div>
                 <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 py-1 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-teal-600" />
+                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
                   <span>Barangays ({results.barangays.length})</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-1">
@@ -202,7 +202,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onNavigateSection('destinations');
                         onClose();
                       }}
-                      className="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-700 hover:text-teal-800 text-xs font-semibold text-left transition-colors truncate border border-slate-100"
+                      className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-800 text-xs font-semibold text-left transition-colors truncate border border-slate-100"
                     >
                       Brgy. {b}
                     </button>
@@ -268,7 +268,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 onOpenAdmin();
                 onClose();
               }}
-              className="text-emerald-700 font-bold hover:underline"
+              className="text-blue-700 font-bold hover:underline"
             >
               Open LGU Admin Portal
             </button>

@@ -105,6 +105,7 @@ export interface CarouselSlide {
   title: string;
   subtitle?: string;
   imageUrl: string;
+  destinationId?: string;
   order: number;
   isActive: boolean;
   createdAt: number;

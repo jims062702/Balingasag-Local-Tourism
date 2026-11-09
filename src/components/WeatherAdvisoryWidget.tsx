@@ -93,11 +93,11 @@ export const WeatherAdvisoryWidget: React.FC = () => {
   }, []);
 
   const getWeatherIcon = (code: number) => {
-    if (code >= 95) return <CloudLightning className="w-10 h-10 text-amber-500 animate-pulse" />;
-    if (code >= 50) return <CloudRain className="w-10 h-10 text-cyan-500" />;
+    if (code >= 95) return <CloudLightning className="w-10 h-10 text-blue-400 animate-pulse" />;
+    if (code >= 50) return <CloudRain className="w-10 h-10 text-blue-400" />;
     if (code === 1 || code === 2 || code === 3)
-      return <CloudSun className="w-10 h-10 text-amber-400" />;
-    return <Sun className="w-10 h-10 text-yellow-500 animate-spin-slow" />;
+      return <CloudSun className="w-10 h-10 text-blue-300" />;
+    return <Sun className="w-10 h-10 text-blue-400 animate-spin-slow" />;
   };
 
   const filteredAdvisories = advisories.filter((adv) => {
@@ -106,24 +106,24 @@ export const WeatherAdvisoryWidget: React.FC = () => {
   });
 
   return (
-    <section className="py-16 bg-[#FFFAF0] text-slate-900 border-t border-amber-900/10" id="weather-advisories">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Section Header */}
+    <section className="py-20 bg-[#FAF7F2] text-stone-900 border-t border-stone-200/80" id="weather-advisories">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* Section Header matching zalio.ai */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.2 }}
           transition={{ duration: 0.5 }}
-          className="pb-4 border-b border-amber-900/10"
+          className="pb-4 border-b border-stone-200/80"
         >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold mb-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
-            <span>Traveler Safety &amp; Climate</span>
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
+            <span className="w-2 h-2 rounded-full bg-blue-600 ring-4 ring-blue-600/20" />
+            <span>Safety &amp; Local Climate</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-black text-stone-900 tracking-tight">
             Weather &amp; Travel Advisories
           </h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-stone-600 mt-1 max-w-xl">
             Real-time coastal micro-climate and official municipal advisories for all Balingasag visitors.
           </p>
         </motion.div>
@@ -131,12 +131,12 @@ export const WeatherAdvisoryWidget: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Live Weather Card for Balingasag */}
           <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-emerald-900 via-teal-950 to-slate-950 rounded-3xl p-6 text-white shadow-xl border border-emerald-800/40 relative overflow-hidden h-full flex flex-col justify-between">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950 rounded-3xl p-6 text-white shadow-xl border border-slate-800 relative overflow-hidden h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between pb-4 border-b border-white/10">
                   <div className="flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                    <Compass className="w-4 h-4 text-blue-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-300">
                       Live Micro-Climate
                     </span>
                   </div>
@@ -156,7 +156,7 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                     <p className="mt-3 text-4xl sm:text-5xl font-black tracking-tight text-white">
                       {weather ? `${weather.temperature}°C` : '--'}
                     </p>
-                    <p className="text-xs font-semibold text-emerald-300 mt-1">
+                    <p className="text-xs font-semibold text-blue-300 mt-1">
                       Feels like {weather?.apparentTemperature || '--'}°C
                     </p>
                   </div>
@@ -165,12 +165,12 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                     {weather ? (
                       getWeatherIcon(weather.weatherCode)
                     ) : (
-                      <Sun className="w-10 h-10 text-yellow-400" />
+                      <Sun className="w-10 h-10 text-blue-400" />
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 px-3.5 py-2 rounded-xl bg-white/10 border border-white/10 text-xs font-semibold text-emerald-100 flex items-center justify-between">
+                <div className="mt-4 px-3.5 py-2 rounded-xl bg-white/10 border border-white/10 text-xs font-semibold text-blue-100 flex items-center justify-between">
                   <span>{weather?.weatherDescription || 'Loading weather report...'}</span>
                   <span className="text-[10px] text-slate-400">Updated {weather?.lastUpdated}</span>
                 </div>
@@ -181,11 +181,11 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                   <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-3 flex items-center gap-3">
                     <DroppingWaterAnimation className="w-11 h-11 shrink-0" />
                     <div className="min-w-0">
-                      <div className="text-[11px] text-emerald-200 font-semibold tracking-wide">Humidity</div>
+                      <div className="text-[11px] text-blue-200 font-semibold tracking-wide">Humidity</div>
                       <div className="text-base font-extrabold text-white">
                         {weather ? `${weather.humidity}%` : '--'}
                       </div>
-                      <div className="text-[10px] text-emerald-300/80 leading-none mt-0.5 truncate">
+                      <div className="text-[10px] text-blue-300/80 leading-none mt-0.5 truncate">
                         Moisture Drop
                       </div>
                     </div>
@@ -195,11 +195,11 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                   <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-3 flex items-center gap-3">
                     <BlowingWindAnimation className="w-11 h-11 shrink-0" />
                     <div className="min-w-0">
-                      <div className="text-[11px] text-teal-200 font-semibold tracking-wide">Coastal Wind</div>
+                      <div className="text-[11px] text-blue-200 font-semibold tracking-wide">Coastal Wind</div>
                       <div className="text-base font-extrabold text-white">
                         {weather ? `${weather.windSpeed} km/h` : '--'}
                       </div>
-                      <div className="text-[10px] text-teal-300/80 leading-none mt-0.5 truncate">
+                      <div className="text-[10px] text-blue-300/80 leading-none mt-0.5 truncate">
                         Bay Breeze
                       </div>
                     </div>
@@ -208,7 +208,7 @@ export const WeatherAdvisoryWidget: React.FC = () => {
               </div>
 
               <div className="mt-6 pt-4 border-t border-white/10 text-[11px] text-slate-300 flex items-center gap-2">
-                <Thermometer className="w-4 h-4 text-emerald-400 shrink-0" />
+                <Thermometer className="w-4 h-4 text-blue-400 shrink-0" />
                 <span>
                   Tropical maritime climate along Macajalar Bay. Mornings are typically best for hiking.
                 </span>
@@ -222,7 +222,7 @@ export const WeatherAdvisoryWidget: React.FC = () => {
               <div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700">
+                    <div className="p-2.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700">
                       <ShieldAlert className="w-6 h-6" />
                     </div>
                     <div>
@@ -235,7 +235,7 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="block items-center gap-1.5 flex-wrap">
                     {(['all', 'warning', 'advisory', 'info'] as const).map((filter) => (
                       <button
                         key={filter}
@@ -249,13 +249,6 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                         {filter}
                       </button>
                     ))}
-                    <button
-                      onClick={loadAdvisories}
-                      title="Reload Firestore advisories"
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${loadingAdvisories ? 'animate-spin' : ''}`} />
-                    </button>
                   </div>
                 </div>
 
@@ -282,20 +275,20 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                           key={advisory.id}
                           className={`p-4 rounded-2xl border transition-all ${
                             isWarning
-                              ? 'bg-red-50/80 border-red-200'
+                              ? 'bg-slate-900 text-white border-slate-800'
                               : isAdvisory
-                              ? 'bg-amber-50/80 border-amber-200'
-                              : 'bg-blue-50/80 border-blue-200'
+                              ? 'bg-blue-50/90 border-blue-200'
+                              : 'bg-slate-50 border-slate-200'
                           }`}
                         >
                           <div className="flex items-start gap-3">
                             <div className="mt-0.5 shrink-0">
                               {isWarning ? (
-                                <ShieldAlert className="w-5 h-5 text-red-600" />
+                                <ShieldAlert className="w-5 h-5 text-blue-400" />
                               ) : isAdvisory ? (
-                                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                <AlertTriangle className="w-5 h-5 text-blue-600" />
                               ) : (
-                                <Info className="w-5 h-5 text-blue-600" />
+                                <Info className="w-5 h-5 text-slate-600" />
                               )}
                             </div>
 
@@ -304,10 +297,10 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                                 <h4
                                   className={`text-sm font-bold ${
                                     isWarning
-                                      ? 'text-red-900'
+                                      ? 'text-white'
                                       : isAdvisory
-                                      ? 'text-amber-900'
-                                      : 'text-blue-900'
+                                      ? 'text-blue-950'
+                                      : 'text-slate-900'
                                   }`}
                                 >
                                   {advisory.title}
@@ -315,10 +308,10 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                                 <span
                                   className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
                                     isWarning
-                                      ? 'bg-red-200 text-red-800'
+                                      ? 'bg-blue-600 text-white'
                                       : isAdvisory
-                                      ? 'bg-amber-200 text-amber-800'
-                                      : 'bg-blue-200 text-blue-800'
+                                      ? 'bg-blue-200 text-blue-900'
+                                      : 'bg-slate-200 text-slate-800'
                                   }`}
                                 >
                                   {advisory.severity}
