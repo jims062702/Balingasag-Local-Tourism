@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck,
@@ -164,6 +164,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Image Upload States
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
+  // Persistent library of uploaded images (Remembers every uploaded photo across sessions)
+  const [customUploadedUrls, setCustomUploadedUrls] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('balingasag_uploaded_images');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+
+  const recordUploadedImage = (url: string) => {
+    if (!url) return;
+    setCustomUploadedUrls((prev) => {
+      const next = Array.from(new Set([url, ...prev]));
+      try {
+        localStorage.setItem('balingasag_uploaded_images', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Comprehensive image library: pools all uploaded images across slides, destinations, and browser sessions
+  const allLibraryImages = useMemo(() => {
+    const set = new Set<string>();
+
+    // 1. Any image uploaded in this browser or persisted in localStorage
+    customUploadedUrls.forEach((u) => u && set.add(u));
+
+    // 2. All carousel slide images from Firestore/props
+    (carouselSlides || []).forEach((s) => s.imageUrl && set.add(s.imageUrl));
+
+    // 3. All destination images (hero + gallery)
+    (destinations || []).forEach((d) => {
+      if (d.heroImage) set.add(d.heroImage);
+      if (Array.isArray(d.gallery)) d.gallery.forEach((g) => g && set.add(g));
+    });
+
+    // 4. All event images
+    (events || []).forEach((e) => e.imageUrl && set.add(e.imageUrl));
+
+    return Array.from(set);
+  }, [customUploadedUrls, carouselSlides, destinations, events]);
+
   // Dynamic inputs for Itinerary, Inclusions, Gallery
   const [newItinTime, setNewItinTime] = useState('');
   const [newItinAct, setNewItinAct] = useState('');
@@ -255,6 +300,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           gallery: [...(prev.gallery || []), res.secure_url],
         }));
       }
+      recordUploadedImage(res.secure_url);
       toast.success('Photo successfully uploaded & optimized with Cloudinary!', { id: toastId });
     } catch (err: any) {
       toast.error(err.message || 'Cloudinary upload failed', { id: toastId });
@@ -580,6 +626,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         ...prev,
         imageUrl: res.secure_url,
       }));
+      recordUploadedImage(res.secure_url);
       toast.success('Slide photo successfully uploaded with Cloudinary!', { id: toastId });
     } catch (err: any) {
       toast.error(err.message || 'Cloudinary upload failed', { id: toastId });
@@ -1730,8 +1777,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {/* Cloudinary Upload Section */}
               <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-200">Cloudinary Photo</span>
-                  <label className="cursor-pointer px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5">
+                  <span className="font-bold text-slate-200">Main Cover / Hero Photo</span>
+                  <label className="cursor-pointer px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-1.5 text-xs">
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload Image</span>
                     <input
@@ -1747,15 +1794,157 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <img
                     src={destForm.heroImage}
                     alt=""
-                    className="w-20 h-14 object-cover rounded-xl border border-slate-600"
+                    className="w-20 h-14 object-cover rounded-xl border border-slate-600 shrink-0 bg-slate-950"
                   />
                   <input
                     type="url"
                     value={destForm.heroImage}
                     onChange={(e) => setDestForm({ ...destForm, heroImage: e.target.value })}
-                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white"
+                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs"
+                    placeholder="https://..."
                   />
                 </div>
+
+                {/* Quick Pick Hero Image from Uploaded Library */}
+                {allLibraryImages.length > 0 && (
+                  <div className="pt-2 border-t border-slate-700/60">
+                    <label className="block text-[10px] text-blue-400 uppercase font-bold mb-1.5 flex items-center gap-1">
+                      <ImageIcon className="w-3 h-3" />
+                      <span>Or pick from uploaded photos ({allLibraryImages.length}):</span>
+                    </label>
+                    <div className="flex gap-2 overflow-x-auto pb-1.5">
+                      {allLibraryImages.map((img, i) => (
+                        <button
+                          type="button"
+                          key={i}
+                          onClick={() => setDestForm({ ...destForm, heroImage: img })}
+                          className={`h-12 w-16 rounded-lg overflow-hidden border shrink-0 transition-all ${
+                            destForm.heroImage === img
+                              ? 'border-blue-500 ring-2 ring-blue-500/50 scale-105'
+                              : 'border-slate-700 opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={img} alt="media" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Destination Gallery Photos Management */}
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-200">
+                      Destination Photo Gallery
+                    </span>
+                    <span className="text-slate-400 text-xs ml-2">
+                      ({(destForm.gallery || []).length} photos)
+                    </span>
+                  </div>
+                  <label className="cursor-pointer px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 font-bold rounded-xl flex items-center gap-1.5 text-xs">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload to Gallery</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, false)}
+                    />
+                  </label>
+                </div>
+
+                {/* Gallery Thumbnails with Remove */}
+                {destForm.gallery && destForm.gallery.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {destForm.gallery.map((imgUrl, gIdx) => (
+                      <div
+                        key={gIdx}
+                        className="relative group rounded-xl overflow-hidden border border-slate-700 aspect-video bg-slate-950"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Gallery ${gIdx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGalleryItem(gIdx)}
+                          className="absolute top-1 right-1 p-1 rounded-md bg-red-600/90 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-md"
+                          title="Remove photo"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-xs italic">No photos in gallery yet.</p>
+                )}
+
+                {/* Add Photo by URL */}
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="Paste image URL to add to gallery..."
+                    value={newGalleryUrl}
+                    onChange={(e) => setNewGalleryUrl(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddGalleryUrl}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shrink-0"
+                  >
+                    Add URL
+                  </button>
+                </div>
+
+                {/* Quick Add from Uploaded Library to Gallery */}
+                {allLibraryImages.length > 0 && (
+                  <div>
+                    <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1">
+                      Quick-add from uploaded library:
+                    </label>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {allLibraryImages.map((img, i) => {
+                        const inGallery = (destForm.gallery || []).includes(img);
+                        return (
+                          <button
+                            type="button"
+                            key={i}
+                            onClick={() => {
+                              if (inGallery) {
+                                setDestForm((prev) => ({
+                                  ...prev,
+                                  gallery: (prev.gallery || []).filter((g) => g !== img),
+                                }));
+                              } else {
+                                setDestForm((prev) => ({
+                                  ...prev,
+                                  gallery: [...(prev.gallery || []), img],
+                                }));
+                              }
+                            }}
+                            className={`h-11 w-14 rounded-lg overflow-hidden border shrink-0 transition-all relative ${
+                              inGallery
+                                ? 'border-blue-500 ring-2 ring-blue-500/50'
+                                : 'border-slate-700 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <img src={img} alt="media" className="w-full h-full object-cover" />
+                            {inGallery && (
+                              <div className="absolute inset-0 bg-blue-600/40 flex items-center justify-center">
+                                <CheckCircle className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Itinerary */}
@@ -1924,19 +2113,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 )}
 
-                {/* Preset Options */}
-                <div className="mt-2">
+                {/* Uploaded Photos & Media Library (Displays all images uploaded by user across all slides and destinations) */}
+                {allLibraryImages.length > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[10px] text-blue-400 uppercase font-bold flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>Your Uploaded Photos &amp; Media Library ({allLibraryImages.length})</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">Click to select for this slide</span>
+                    </div>
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-36 overflow-y-auto p-1.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                      {allLibraryImages.map((img, i) => (
+                        <button
+                          type="button"
+                          key={i}
+                          onClick={() => setSlideForm({ ...slideForm, imageUrl: img })}
+                          className={`relative aspect-video rounded-lg overflow-hidden border transition-all ${
+                            slideForm.imageUrl === img
+                              ? 'border-blue-500 ring-2 ring-blue-500/50 scale-[1.03]'
+                              : 'border-slate-700/80 hover:border-slate-500 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={img} alt={`Uploaded ${i + 1}`} className="w-full h-full object-cover" />
+                          {slideForm.imageUrl === img && (
+                            <div className="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
+                              <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Selected</span>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Preset Options (All High-Res Presets) */}
+                <div className="mt-3">
                   <label className="block text-[10px] text-slate-400 uppercase font-bold mb-1.5">
-                    Or choose from high-res presets:
+                    Or choose from high-res presets ({PRESET_GALLERY_IMAGES.length}):
                   </label>
                   <div className="flex gap-2 overflow-x-auto pb-2">
-                    {PRESET_GALLERY_IMAGES.slice(0, 5).map((img, i) => (
+                    {PRESET_GALLERY_IMAGES.map((img, i) => (
                       <button
                         type="button"
                         key={i}
                         onClick={() => setSlideForm({ ...slideForm, imageUrl: img })}
                         className={`h-12 w-16 rounded-lg overflow-hidden border shrink-0 transition-transform ${
-                          slideForm.imageUrl === img ? 'border-blue-500 scale-105' : 'border-slate-700 opacity-60 hover:opacity-100'
+                          slideForm.imageUrl === img ? 'border-blue-500 scale-105 ring-2 ring-blue-500/50' : 'border-slate-700 opacity-60 hover:opacity-100'
                         }`}
                       >
                         <img src={img} alt="preset" className="w-full h-full object-cover" />

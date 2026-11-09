@@ -25,6 +25,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [phTime, setPhTime] = useState('');
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Real-time Philippine Standard Time (PST, UTC+8) Live Digital Clock
   useEffect(() => {
@@ -57,12 +58,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentSlides.length]);
 
-  // Automatically cycle slides every 3 seconds (strictly continuous, never paused)
+  // Automatically cycle slides every 5 seconds (strictly continuous, never paused)
   useEffect(() => {
     if (currentSlides.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % currentSlides.length);
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [currentSlide, currentSlides.length]);
 
@@ -81,6 +82,30 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
     setCurrentSlide((prev) => (prev - 1 + currentSlides.length) % currentSlides.length);
   };
 
+  // Mobile Touch Swipe Gesture Support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+    setTouchStartX(null);
+  };
+
+  const scrollToDestinations = () => {
+    const el = document.getElementById('destinations');
+    el?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const scrollToDemographics = () => {
     const el = document.getElementById('demographics');
     el?.scrollIntoView({ behavior: 'smooth' });
@@ -96,6 +121,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
   return (
     <section
       id="hero"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className="relative w-full h-screen min-h-[680px] flex items-center overflow-hidden bg-slate-950 text-white"
     >
       {/* Background Smooth Carousel (High-Resolution & AI Sharpened via Cloudinary) */}
@@ -124,15 +151,35 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Subtle Vignette Overlays: Maximizes carousel image space & clarity while ensuring text readability */}
+        {/* Subtle Vignette Overlays: Maximizes carousel image space & clarity while ensuring left text readability */}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/45 to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-slate-950/30 pointer-events-none" />
       </div>
 
-      {/* Clean Foreground Hero Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 pt-28 sm:pt-32 pb-20 w-full">
-        <div className="max-w-2xl space-y-6 text-left">
-          {/* Main Heading */}
+      {/* Floating Left Arrow (Barangay Natumolan Style: Frosted glass circular button on the left edge) */}
+      <button
+        onClick={handlePrev}
+        aria-label="Previous slide"
+        className="hidden sm:flex absolute left-4 sm:left-6 md:left-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md items-center justify-center text-white transition-all shadow-xl hover:scale-105 active:scale-95 group focus:outline-none"
+      >
+        <ChevronLeft className="w-5 h-5 text-white/90 group-hover:text-white transition-transform group-hover:-translate-x-0.5" />
+      </button>
+
+      {/* Floating Right Arrow (Barangay Natumolan Style: Frosted glass circular button on the right edge) */}
+      <button
+        onClick={handleNext}
+        aria-label="Next slide"
+        className="hidden sm:flex absolute right-4 sm:right-6 md:right-8 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md items-center justify-center text-white transition-all shadow-xl hover:scale-105 active:scale-95 group focus:outline-none"
+      >
+        <ChevronRight className="w-5 h-5 text-white/90 group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+      </button>
+
+      {/* Left-Aligned Foreground Hero Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 pt-28 sm:pt-32 pb-24 w-full flex flex-col items-start text-left">
+        <div className="max-w-2xl space-y-5 sm:space-y-6 text-left">
+          {/* Top Tagline Badge */}
+
+          {/* Main Heading (Left-Aligned) */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -146,7 +193,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
             </span>
           </motion.h1>
 
-          {/* Subtitle (Camuayan Cold Springs accurately phrased) */}
+          {/* Subtitle (Left-Aligned) */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -160,17 +207,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
             A curated, community-driven guide crafted purely for authentic local exploration.
           </motion.p>
 
-          {/* Primary Action Buttons (Municipal Profile & LGU Officials) */}
+          {/* Primary Action Buttons (Municipal Profile & LGU Officials strictly on the left side) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, amount: 0.3 }}
             transition={{ delay: 0.3, duration: 0.6 }}
-            className="flex items-center gap-3.5 pt-2 flex-wrap"
+            className="flex flex-row items-center justify-start gap-2.5 sm:gap-3.5 pt-2 flex-nowrap"
           >
             <button
               onClick={scrollToDemographics}
-              className="px-6 py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-950/50 transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95 group"
+              className="px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-950/50 transition-all flex items-center gap-1.5 sm:gap-2 hover:scale-[1.02] active:scale-95 group shrink-0 whitespace-nowrap"
             >
               <Building2 className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
               <span>Municipal profile</span>
@@ -178,7 +225,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
 
             <button
               onClick={scrollToLGUOfficials}
-              className="px-6 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white font-semibold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-95"
+              className="px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white font-semibold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all flex items-center gap-1.5 sm:gap-2 hover:scale-[1.02] active:scale-95 shrink-0 whitespace-nowrap"
             >
               <Users className="w-4 h-4 text-blue-400" />
               <span>LGU officials</span>
@@ -187,40 +234,33 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
         </div>
       </div>
 
-      {/* Sleek Carousel Slide Navigator (Bottom-Right Glass Pill: Clean, Minimal, Non-Intrusive) */}
-      <div className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8 z-20 flex items-center gap-3 bg-slate-950/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/15 shadow-xl text-xs">
-        <button
-          onClick={handlePrev}
-          aria-label="Previous slide"
-          className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        <span className="font-mono text-[11px] font-bold text-blue-400 tracking-wider">
-          {String(currentSlide + 1).padStart(2, '0')} / {String(currentSlides.length).padStart(2, '0')}
-        </span>
-
-        <button
-          onClick={handleNext}
-          aria-label="Next slide"
-          className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+      {/* Centered Slide Dots Indicator (Barangay Natumolan Style: Dots with active oval pill directly above scroll down) */}
+      <div className="absolute bottom-12 sm:bottom-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        {currentSlides.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrentSlide(idx)}
+            aria-label={`Go to slide ${idx + 1}`}
+            className={`transition-all duration-300 rounded-full focus:outline-none ${
+              idx === currentSlide
+                ? 'w-7 sm:w-8 h-2 sm:h-2.5 bg-blue-500 shadow-md shadow-blue-500/50'
+                : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-white/40 hover:bg-white/70'
+            }`}
+          />
+        ))}
       </div>
 
-      {/* Centered Scroll Down Arrow */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+      {/* Centered Scroll Down Arrow (Barangay Natumolan Style) */}
+      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
         <button
-          onClick={scrollToDemographics}
-          aria-label="Scroll down to Municipal Profile"
+          onClick={scrollToDestinations}
+          aria-label="Scroll down to Tourism Spots"
           className="flex flex-col items-center gap-0.5 group text-slate-400 hover:text-white transition-colors focus:outline-none"
         >
           <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 group-hover:text-blue-400 transition-colors">
             Scroll to Explore
           </span>
-          <ChevronDown className="w-5 h-5 text-blue-400 group-hover:text-blue-300 animate-bounce" />
+          <ChevronDown className="w-4 h-4 text-blue-400 group-hover:text-blue-300 animate-bounce" />
         </button>
       </div>
     </section>

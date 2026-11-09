@@ -37,21 +37,21 @@ export const ScrollToTop: React.FC = () => {
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: 20 }}
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={scrollToTop}
           title={`Scroll to top (${Math.round(scrollProgress)}% viewed)`}
           aria-label="Scroll to top of page"
-          className="fixed bottom-24 right-6 z-40 p-2 rounded-full bg-stone-950/90 text-white shadow-2xl backdrop-blur-md border border-stone-700/60 flex items-center justify-center group focus:outline-none"
+          className="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 p-1 rounded-full bg-slate-950/90 text-white shadow-2xl backdrop-blur-md border border-slate-700/70 flex items-center justify-center group focus:outline-none"
         >
-          {/* Progress Circle SVG */}
-          <svg className="w-12 h-12 transform -rotate-90 pointer-events-none" viewBox="0 0 48 48">
+          {/* Progress Circle SVG (Matches Chatbot Outer Dimensions Exactly) */}
+          <svg className="w-full h-full transform -rotate-90 pointer-events-none" viewBox="0 0 48 48">
             {/* Background Track */}
             <circle
               cx="24"
               cy="24"
               r={radius}
-              className="text-stone-800"
+              className="text-slate-800"
               strokeWidth="3.5"
               stroke="currentColor"
               fill="transparent"
@@ -73,7 +73,7 @@ export const ScrollToTop: React.FC = () => {
 
           {/* Centered Arrow Icon */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <ArrowUp className="w-5 h-5 text-stone-200 group-hover:text-white transition-colors group-hover:-translate-y-0.5 duration-200" />
+            <ArrowUp className="w-5 h-5 text-slate-200 group-hover:text-white transition-colors group-hover:-translate-y-0.5 duration-200" />
           </div>
         </motion.button>
       )}

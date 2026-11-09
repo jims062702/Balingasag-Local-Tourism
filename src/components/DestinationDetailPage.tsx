@@ -119,36 +119,36 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-stone-900 pt-24 sm:pt-28 pb-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        {/* Navigation Breadcrumb Bar */}
+        {/* Navigation Breadcrumb Bar (Fully visible and responsive on all viewports) */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between flex-wrap gap-4 py-2 border-b border-slate-200"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 border-b border-slate-200"
         >
-          <div className="flex items-center gap-2 text-xs sm:text-sm">
+          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm leading-relaxed text-slate-600">
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 font-bold text-blue-700 hover:text-blue-900 transition-colors"
+              className="inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 transition-colors shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to All Tourism Spots</span>
             </button>
-            <span className="text-slate-300">/</span>
-            <span className="text-slate-500">{destination.category}</span>
-            <span className="text-slate-300">/</span>
-            <span className="font-semibold text-slate-900 truncate max-w-[200px] sm:max-w-none">
+            <span className="text-slate-300 select-none">/</span>
+            <span className="text-slate-500 font-medium shrink-0">{destination.category}</span>
+            <span className="text-slate-300 select-none">/</span>
+            <span className="font-bold text-slate-900 break-words">
               {destination.name}
             </span>
-          </div>
+          </nav>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
               title="Print Traveler Summary"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Print Guide</span>
+              <span>Print</span>
             </button>
 
             <button

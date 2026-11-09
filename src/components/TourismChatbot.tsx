@@ -332,9 +332,9 @@ export const TourismChatbot: React.FC = () => {
 
   return (
     <>
-      {/* Floating Action Button (Positioned at bottom-6 right-6, directly under ScrollToTop) */}
-      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
-        {/* Dynamic Animated Speech Bubble */}
+      {/* Floating Action Button (Positioned at bottom-4 right-4 on mobile, bottom-6 right-6 on desktop) */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-2 sm:gap-3">
+        {/* Dynamic Animated Speech Bubble with Active Typing Indicator & Callout Tips (Responsive on Mobile POV) */}
         <AnimatePresence>
           {!isOpen && (
             <motion.div
@@ -343,20 +343,20 @@ export const TourismChatbot: React.FC = () => {
               exit={{ opacity: 0, scale: 0.85, x: 10 }}
               transition={{ duration: 0.25 }}
               onClick={() => setIsOpen(true)}
-              className="cursor-pointer select-none hidden sm:block"
+              className="cursor-pointer select-none flex items-center"
             >
-              <div className="relative bg-[#0F172A] text-white px-4 py-2.5 rounded-2xl border border-slate-700/80 shadow-2xl flex items-center min-h-[44px]">
+              <div className="relative bg-[#0F172A] text-white px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-2xl border border-slate-700/80 shadow-2xl flex items-center min-h-[36px] sm:min-h-[44px] max-w-[170px] sm:max-w-[280px]">
                 {/* Speech Bubble Tail pointing right towards the icon */}
                 <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-0 h-0 border-y-[6px] border-y-transparent border-l-[8px] border-l-[#0F172A]" />
 
                 {bubblePhase === 'thinking' ? (
-                  <div className="flex items-center gap-1.5 px-3 py-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]" />
+                  <div className="flex items-center gap-1.5 px-2 py-0.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" />
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]" />
                   </div>
                 ) : (
-                  <p className="text-xs sm:text-sm font-semibold text-white tracking-tight leading-snug whitespace-nowrap">
+                  <p className="text-[11px] sm:text-xs font-semibold text-white tracking-tight leading-snug truncate">
                     {CALLOUT_MESSAGES[messageIndex]}
                   </p>
                 )}
@@ -365,20 +365,20 @@ export const TourismChatbot: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Circular Chatbot Button (Royal Cobalt Blue & Modern Bot Icon) */}
+        {/* Circular Chatbot Button (Matches ScrollToTop Outer Dimensions Exactly: w-12 h-12 on mobile, w-14 h-14 on desktop) */}
         <motion.button
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)}
           title="Balingasag AI Tourism Guide"
           aria-label="Toggle Tourism Chatbot"
-          className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white shadow-2xl border-2 border-blue-300/40 flex items-center justify-center group focus:outline-none shrink-0 relative"
+          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white shadow-2xl border-2 border-blue-300/40 flex items-center justify-center group focus:outline-none shrink-0 relative"
         >
           {/* Glowing pulse ring */}
           <span className="absolute inset-0 rounded-full bg-blue-400 opacity-25 animate-ping pointer-events-none" />
 
           {/* Modern Bot Icon */}
-          <Bot className="w-7 h-7 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
+          <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
         </motion.button>
       </div>
 
@@ -408,7 +408,7 @@ export const TourismChatbot: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-400">
-                    Official Local Tourism Assistant • 255 char limit
+                    Official Local Tourism Assistant
                   </p>
                 </div>
               </div>
@@ -480,10 +480,6 @@ export const TourismChatbot: React.FC = () => {
 
             {/* Basic FAQ Questions Chips (Token Saver & Instant Answers) */}
             <div className="p-2.5 bg-slate-100/90 border-t border-slate-200 flex flex-col gap-1.5">
-              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-1">
-                <Zap className="w-3 h-3 text-blue-600" />
-                <span>Instant FAQs (0 Tokens Consumed):</span>
-              </div>
               <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
                 {BASIC_QUESTIONS.map((sug, i) => (
                   <button
@@ -522,7 +518,7 @@ export const TourismChatbot: React.FC = () => {
                     placeholder={
                       cooldownRemaining > 0
                         ? `Locked for ${formatCooldown(cooldownRemaining)}...`
-                        : 'Ask about Balingasag (max 255 chars)...'
+                        : 'Ask about Balingasag'
                     }
                     className={`w-full py-2.5 pl-3.5 pr-20 rounded-2xl text-xs border focus:outline-none transition-all ${
                       cooldownRemaining > 0
@@ -565,10 +561,6 @@ export const TourismChatbot: React.FC = () => {
               </form>
 
               {/* Anti-spam rule note */}
-              <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
-                <span>Anti-Spam: 15s • 1m • 24h buffer</span>
-                <span>Max 255 chars</span>
-              </div>
             </div>
           </motion.div>
         )}
