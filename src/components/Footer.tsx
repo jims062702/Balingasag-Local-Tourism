@@ -105,9 +105,6 @@ export const Footer: React.FC = () => {
                   <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
                     Discover Balingasag
                   </h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-300 border border-blue-500/30 font-semibold">
-                    ZIP 9005
-                  </span>
                 </div>
                 <p className="text-[11px] text-slate-400 font-medium">
                   Official Tourism &amp; Heritage Discovery Portal • Misamis Oriental, Philippines
@@ -252,7 +249,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Credits & Disclaimer */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
           <div>
-            © {new Date().getFullYear()} Municipality of Balingasag, Misamis Oriental. Free-tier informational portal.
+            © {new Date().getFullYear()} Municipality of Balingasag, Misamis Oriental.
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span>Designed &amp; Engineered by</span>

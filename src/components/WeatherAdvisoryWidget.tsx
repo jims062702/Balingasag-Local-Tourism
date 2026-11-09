@@ -116,10 +116,6 @@ export const WeatherAdvisoryWidget: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="pb-4 border-b border-stone-200/80"
         >
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
-            <span className="w-2 h-2 rounded-full bg-blue-600 ring-4 ring-blue-600/20" />
-            <span>Safety &amp; Local Climate</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-black text-stone-900 tracking-tight">
             Weather &amp; Travel Advisories
           </h2>
@@ -235,7 +231,7 @@ export const WeatherAdvisoryWidget: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="block items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {(['all', 'warning', 'advisory', 'info'] as const).map((filter) => (
                       <button
                         key={filter}

@@ -109,10 +109,6 @@ export const DemographicsSection: React.FC<DemographicsSectionProps> = ({
           transition={{ duration: 0.5 }}
           className="text-center max-w-3xl mx-auto space-y-3"
         >
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-stone-500 mb-1">
-            <span className="w-2 h-2 rounded-full bg-blue-600 ring-4 ring-blue-600/20" />
-            <span>Official Municipal Profile</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-black text-stone-900 tracking-tight">
             {p.headlineTitle}
           </h2>
