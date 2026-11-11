@@ -84,36 +84,47 @@ const removeDeletedId = (key: string, id: string) => {
 
 /**
  * Smart merge destinations from cloud and local:
- * 1. Filter out all items explicitly marked as deleted.
+ * 1. Filter out all items explicitly marked as deleted by ID or normalized name.
  * 2. Keep locally added / modified items so hard refresh never wipes them.
- * 3. Sync merged state to localStorage.
+ * 3. Deduplicate strictly by ID and normalized name so duplicates never appear.
+ * 4. Sync merged state to localStorage.
  */
 export const mergeDestinations = (cloudItems: Destination[]): Destination[] => {
   const deletedIds = getDeletedIds(DELETED_DESTINATIONS_KEY);
   const localItems = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
 
-  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
-  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+  const isDeleted = (d: Destination) => {
+    if (!d || !d.id) return true;
+    if (deletedIds.has(d.id)) return true;
+    if (d.name && deletedIds.has(d.name.toLowerCase().trim())) return true;
+    if (d.heroImage && deletedIds.has(d.heroImage)) return true;
+    return false;
+  };
 
+  const activeCloud = (cloudItems || []).filter((item) => !isDeleted(item));
+
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
   const merged: Destination[] = [];
 
+  // Local items first (takes priority so local adds/edits are preserved immediately)
   for (const local of localItems) {
-    if (!local || !local.id || deletedIds.has(local.id)) continue;
-    const cloud = cloudMap.get(local.id);
-    if (cloud) {
-      const useCloud = (cloud.updatedAt || 0) > (local.updatedAt || 0);
-      merged.push(useCloud ? cloud : local);
-      cloudMap.delete(local.id);
-    } else {
-      // Local newly added destination: preserve it!
-      merged.push(local);
-    }
+    if (isDeleted(local)) continue;
+    const nameKey = (local.name || '').toLowerCase().trim();
+    if (seenIds.has(local.id) || (nameKey && seenNames.has(nameKey))) continue;
+    merged.push(local);
+    seenIds.add(local.id);
+    if (nameKey) seenNames.add(nameKey);
   }
 
-  for (const [, cloud] of cloudMap) {
-    if (!deletedIds.has(cloud.id)) {
-      merged.push(cloud);
-    }
+  // Cloud items next
+  for (const cloud of activeCloud) {
+    if (isDeleted(cloud)) continue;
+    const nameKey = (cloud.name || '').toLowerCase().trim();
+    if (seenIds.has(cloud.id) || (nameKey && seenNames.has(nameKey))) continue;
+    merged.push(cloud);
+    seenIds.add(cloud.id);
+    if (nameKey) seenNames.add(nameKey);
   }
 
   merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -178,6 +189,8 @@ export const addDestination = async (
 
   // Remove from deleted list if it was previously deleted
   removeDeletedId(DELETED_DESTINATIONS_KEY, newId);
+  if (destination.name) removeDeletedId(DELETED_DESTINATIONS_KEY, destination.name.toLowerCase().trim());
+  if (destination.heroImage) removeDeletedId(DELETED_DESTINATIONS_KEY, destination.heroImage);
 
   // 1. Immediately save to local persistent store so it survives hard refreshes
   const current = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
@@ -206,6 +219,8 @@ export const updateDestination = async (
   data: Partial<Omit<Destination, 'id' | 'createdAt'>>
 ): Promise<Destination> => {
   removeDeletedId(DELETED_DESTINATIONS_KEY, id);
+  if (data.name) removeDeletedId(DELETED_DESTINATIONS_KEY, data.name.toLowerCase().trim());
+  if (data.heroImage) removeDeletedId(DELETED_DESTINATIONS_KEY, data.heroImage);
 
   const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
   const index = currentList.findIndex((d) => d.id === id);
@@ -242,10 +257,16 @@ export const updateDestination = async (
 
 export const deleteDestination = async (id: string): Promise<void> => {
   // 1. Mark as permanently deleted so cloud resync never revives it
+  const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
+  const target = currentList.find((d) => d.id === id);
+
   addDeletedId(DELETED_DESTINATIONS_KEY, id);
+  if (target) {
+    if (target.name) addDeletedId(DELETED_DESTINATIONS_KEY, target.name.toLowerCase().trim());
+    if (target.heroImage) addDeletedId(DELETED_DESTINATIONS_KEY, target.heroImage);
+  }
 
   // 2. Remove from local store immediately
-  const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
   const updated = currentList.filter((d) => d.id !== id);
   setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, updated);
 
@@ -268,26 +289,35 @@ export const mergeAdvisories = (cloudItems: TravelAdvisory[]): TravelAdvisory[] 
   const deletedIds = getDeletedIds(DELETED_ADVISORIES_KEY);
   const localItems = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
 
-  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
-  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+  const isDeleted = (a: TravelAdvisory) => {
+    if (!a || !a.id) return true;
+    if (deletedIds.has(a.id)) return true;
+    if (a.title && deletedIds.has(a.title.toLowerCase().trim())) return true;
+    return false;
+  };
 
+  const activeCloud = (cloudItems || []).filter((item) => !isDeleted(item));
+
+  const seenIds = new Set<string>();
+  const seenTitles = new Set<string>();
   const merged: TravelAdvisory[] = [];
 
   for (const local of localItems) {
-    if (!local || !local.id || deletedIds.has(local.id)) continue;
-    const cloud = cloudMap.get(local.id);
-    if (cloud) {
-      merged.push(cloud);
-      cloudMap.delete(local.id);
-    } else {
-      merged.push(local);
-    }
+    if (isDeleted(local)) continue;
+    const titleKey = (local.title || '').toLowerCase().trim();
+    if (seenIds.has(local.id) || (titleKey && seenTitles.has(titleKey))) continue;
+    merged.push(local);
+    seenIds.add(local.id);
+    if (titleKey) seenTitles.add(titleKey);
   }
 
-  for (const [, cloud] of cloudMap) {
-    if (!deletedIds.has(cloud.id)) {
-      merged.push(cloud);
-    }
+  for (const cloud of activeCloud) {
+    if (isDeleted(cloud)) continue;
+    const titleKey = (cloud.title || '').toLowerCase().trim();
+    if (seenIds.has(cloud.id) || (titleKey && seenTitles.has(titleKey))) continue;
+    merged.push(cloud);
+    seenIds.add(cloud.id);
+    if (titleKey) seenTitles.add(titleKey);
   }
 
   merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -327,6 +357,7 @@ export const addAdvisory = async (
   };
 
   removeDeletedId(DELETED_ADVISORIES_KEY, newId);
+  if (advisory.title) removeDeletedId(DELETED_ADVISORIES_KEY, advisory.title.toLowerCase().trim());
 
   const current = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
   setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, [newAdv, ...current]);
@@ -345,9 +376,14 @@ export const addAdvisory = async (
 };
 
 export const deleteAdvisory = async (id: string): Promise<void> => {
-  addDeletedId(DELETED_ADVISORIES_KEY, id);
-
   const current = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
+  const target = current.find((a) => a.id === id);
+
+  addDeletedId(DELETED_ADVISORIES_KEY, id);
+  if (target && target.title) {
+    addDeletedId(DELETED_ADVISORIES_KEY, target.title.toLowerCase().trim());
+  }
+
   setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, current.filter((a) => a.id !== id));
 
   if (isFirebaseConfigured() && db) {
@@ -383,26 +419,35 @@ export const mergeEvents = (cloudItems: LocalEvent[]): LocalEvent[] => {
   const deletedIds = getDeletedIds(DELETED_EVENTS_KEY);
   const localItems = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
 
-  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
-  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+  const isDeleted = (e: LocalEvent) => {
+    if (!e || !e.id) return true;
+    if (deletedIds.has(e.id)) return true;
+    if (e.title && deletedIds.has(e.title.toLowerCase().trim())) return true;
+    return false;
+  };
 
+  const activeCloud = (cloudItems || []).filter((item) => !isDeleted(item));
+
+  const seenIds = new Set<string>();
+  const seenTitles = new Set<string>();
   const merged: LocalEvent[] = [];
 
   for (const local of localItems) {
-    if (!local || !local.id || deletedIds.has(local.id)) continue;
-    const cloud = cloudMap.get(local.id);
-    if (cloud) {
-      merged.push(cloud);
-      cloudMap.delete(local.id);
-    } else {
-      merged.push(local);
-    }
+    if (isDeleted(local)) continue;
+    const titleKey = (local.title || '').toLowerCase().trim();
+    if (seenIds.has(local.id) || (titleKey && seenTitles.has(titleKey))) continue;
+    merged.push(local);
+    seenIds.add(local.id);
+    if (titleKey) seenTitles.add(titleKey);
   }
 
-  for (const [, cloud] of cloudMap) {
-    if (!deletedIds.has(cloud.id)) {
-      merged.push(cloud);
-    }
+  for (const cloud of activeCloud) {
+    if (isDeleted(cloud)) continue;
+    const titleKey = (cloud.title || '').toLowerCase().trim();
+    if (seenIds.has(cloud.id) || (titleKey && seenTitles.has(titleKey))) continue;
+    merged.push(cloud);
+    seenIds.add(cloud.id);
+    if (titleKey) seenTitles.add(titleKey);
   }
 
   merged.sort((a, b) => (new Date(a.date).getTime() || 0) - (new Date(b.date).getTime() || 0));
@@ -440,6 +485,7 @@ export const addEvent = async (event: Omit<LocalEvent, 'id' | 'createdAt'>): Pro
   };
 
   removeDeletedId(DELETED_EVENTS_KEY, newId);
+  if (event.title) removeDeletedId(DELETED_EVENTS_KEY, event.title.toLowerCase().trim());
 
   const current = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
   setLocalData(LOCAL_STORAGE_EVENTS_KEY, [newEvt, ...current]);
@@ -458,9 +504,14 @@ export const addEvent = async (event: Omit<LocalEvent, 'id' | 'createdAt'>): Pro
 };
 
 export const deleteEvent = async (id: string): Promise<void> => {
-  addDeletedId(DELETED_EVENTS_KEY, id);
-
   const current = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
+  const target = current.find((e) => e.id === id);
+
+  addDeletedId(DELETED_EVENTS_KEY, id);
+  if (target && target.title) {
+    addDeletedId(DELETED_EVENTS_KEY, target.title.toLowerCase().trim());
+  }
+
   setLocalData(LOCAL_STORAGE_EVENTS_KEY, current.filter((e) => e.id !== id));
 
   if (isFirebaseConfigured() && db) {
@@ -481,27 +532,36 @@ export const mergeCarouselSlides = (cloudItems: CarouselSlide[]): CarouselSlide[
   const deletedIds = getDeletedIds(DELETED_CAROUSEL_KEY);
   const localItems = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
 
-  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
-  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+  const isDeleted = (s: CarouselSlide) => {
+    if (!s || !s.id) return true;
+    if (deletedIds.has(s.id)) return true;
+    if (s.imageUrl && deletedIds.has(s.imageUrl)) return true;
+    if (s.title && deletedIds.has(s.title.toLowerCase().trim())) return true;
+    return false;
+  };
 
+  const activeCloud = (cloudItems || []).filter((item) => !isDeleted(item));
+
+  const seenIds = new Set<string>();
+  const seenImages = new Set<string>();
   const merged: CarouselSlide[] = [];
 
   for (const local of localItems) {
-    if (!local || !local.id || deletedIds.has(local.id)) continue;
-    const cloud = cloudMap.get(local.id);
-    if (cloud) {
-      merged.push(cloud);
-      cloudMap.delete(local.id);
-    } else {
-      // Local newly added slide: preserve it!
-      merged.push(local);
-    }
+    if (isDeleted(local)) continue;
+    if (seenIds.has(local.id)) continue;
+    if (local.imageUrl && seenImages.has(local.imageUrl)) continue;
+    merged.push(local);
+    seenIds.add(local.id);
+    if (local.imageUrl) seenImages.add(local.imageUrl);
   }
 
-  for (const [, cloud] of cloudMap) {
-    if (!deletedIds.has(cloud.id)) {
-      merged.push(cloud);
-    }
+  for (const cloud of activeCloud) {
+    if (isDeleted(cloud)) continue;
+    if (seenIds.has(cloud.id)) continue;
+    if (cloud.imageUrl && seenImages.has(cloud.imageUrl)) continue;
+    merged.push(cloud);
+    seenIds.add(cloud.id);
+    if (cloud.imageUrl) seenImages.add(cloud.imageUrl);
   }
 
   merged.sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -542,6 +602,8 @@ export const addCarouselSlide = async (
   };
 
   removeDeletedId(DELETED_CAROUSEL_KEY, newId);
+  if (slide.imageUrl) removeDeletedId(DELETED_CAROUSEL_KEY, slide.imageUrl);
+  if (slide.title) removeDeletedId(DELETED_CAROUSEL_KEY, slide.title.toLowerCase().trim());
 
   // 1. Immediately save to local persistent store so it survives hard refreshes
   const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
@@ -567,6 +629,8 @@ export const updateCarouselSlide = async (
   slide: Partial<Omit<CarouselSlide, 'id' | 'createdAt'>>
 ): Promise<void> => {
   removeDeletedId(DELETED_CAROUSEL_KEY, id);
+  if (slide.imageUrl) removeDeletedId(DELETED_CAROUSEL_KEY, slide.imageUrl);
+  if (slide.title) removeDeletedId(DELETED_CAROUSEL_KEY, slide.title.toLowerCase().trim());
 
   const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
   const updated = current
@@ -586,11 +650,17 @@ export const updateCarouselSlide = async (
 };
 
 export const deleteCarouselSlide = async (id: string): Promise<void> => {
-  // 1. Mark as permanently deleted
+  // 1. Mark as permanently deleted by ID, imageUrl and title
+  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
+  const target = current.find((s) => s.id === id);
+
   addDeletedId(DELETED_CAROUSEL_KEY, id);
+  if (target) {
+    if (target.imageUrl) addDeletedId(DELETED_CAROUSEL_KEY, target.imageUrl);
+    if (target.title) addDeletedId(DELETED_CAROUSEL_KEY, target.title.toLowerCase().trim());
+  }
 
   // 2. Remove from local store immediately
-  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
   setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, current.filter((s) => s.id !== id));
 
   // 3. Sync delete to Firestore

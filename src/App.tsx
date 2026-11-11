@@ -16,6 +16,10 @@ import {
   getEvents,
   getCarouselSlides,
   getMunicipalProfile,
+  mergeDestinations,
+  mergeAdvisories,
+  mergeEvents,
+  mergeCarouselSlides,
   subscribeToMunicipalProfile,
   subscribeToCarouselSlides,
   subscribeToDestinations,
@@ -49,22 +53,50 @@ export const App: React.FC = () => {
   // Active Section for Scroll-Spy
   const [activeSection, setActiveSection] = useState<string>('hero');
 
-  // Data States
-  const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [advisories, setAdvisories] = useState<TravelAdvisory[]>([]);
-  const [events, setEvents] = useState<LocalEvent[]>([]);
-  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([]);
-  const [municipalProfile, setMunicipalProfile] = useState<MunicipalProfile>(INITIAL_MUNICIPAL_PROFILE);
-  const [loading, setLoading] = useState(true);
+  // Data States (Synchronously initialized so frame-0 has instant local data without blink)
+  const [destinations, setDestinations] = useState<Destination[]>(() => mergeDestinations([]));
+  const [advisories, setAdvisories] = useState<TravelAdvisory[]>(() => mergeAdvisories([]));
+  const [events, setEvents] = useState<LocalEvent[]>(() => mergeEvents([]));
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>(() => mergeCarouselSlides([]));
+  const [municipalProfile, setMunicipalProfile] = useState<MunicipalProfile>(() => {
+    try {
+      const raw = localStorage.getItem('balingasag_municipal_profile_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return INITIAL_MUNICIPAL_PROFILE;
+  });
+  const [loading, setLoading] = useState(false);
 
   // Explorer Filtering States (Search & Category managed in Tourism Spots section)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<DestinationCategory>('All');
   const [selectedBarangay, setSelectedBarangay] = useState('');
 
-  // Admin Authentication State
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
+  // Admin Authentication State (Persistent across hard refresh)
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('balingasag_admin_logged_in') === 'true';
+  });
+  const [adminEmail, setAdminEmail] = useState<string>(() => {
+    return localStorage.getItem('balingasag_admin_email') || '';
+  });
+
+  const handleSetIsAdminLoggedIn = (val: boolean) => {
+    setIsAdminLoggedIn(val);
+    if (val) {
+      localStorage.setItem('balingasag_admin_logged_in', 'true');
+    } else {
+      localStorage.removeItem('balingasag_admin_logged_in');
+    }
+  };
+
+  const handleSetAdminEmail = (email: string) => {
+    setAdminEmail(email);
+    if (email) {
+      localStorage.setItem('balingasag_admin_email', email);
+    } else {
+      localStorage.removeItem('balingasag_admin_email');
+    }
+  };
 
   // Fetch all initial data
   const refreshAllData = async () => {
@@ -133,11 +165,8 @@ export const App: React.FC = () => {
     if (isFirebaseConfigured() && auth) {
       unsubscribeAuth = onAuthStateChanged(auth, (user) => {
         if (user) {
-          setIsAdminLoggedIn(true);
-          setAdminEmail(user.email || 'admin@balingasag.gov.ph');
-        } else {
-          setIsAdminLoggedIn(false);
-          setAdminEmail('');
+          handleSetIsAdminLoggedIn(true);
+          handleSetAdminEmail(user.email || 'admin@balingasag.gov.ph');
         }
       });
     }
@@ -231,9 +260,9 @@ export const App: React.FC = () => {
       {viewMode === 'admin' ? (
         <AdminDashboard
           isAdminLoggedIn={isAdminLoggedIn}
-          setIsAdminLoggedIn={setIsAdminLoggedIn}
+          setIsAdminLoggedIn={handleSetIsAdminLoggedIn}
           adminEmail={adminEmail}
-          setAdminEmail={setAdminEmail}
+          setAdminEmail={handleSetAdminEmail}
           destinations={destinations}
           advisories={advisories}
           events={events}

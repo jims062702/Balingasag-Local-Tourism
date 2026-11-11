@@ -20,8 +20,13 @@ interface HeroBannerProps {
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({ slides }) => {
   const activeSlides =
-    slides && slides.length > 0 ? slides.filter((s) => s.isActive) : INITIAL_CAROUSEL_SLIDES;
-  const currentSlides = activeSlides.length > 0 ? activeSlides : INITIAL_CAROUSEL_SLIDES;
+    slides && slides.length > 0 ? slides.filter((s) => s.isActive) : [];
+  const currentSlides =
+    activeSlides.length > 0
+      ? activeSlides
+      : slides && slides.length > 0
+      ? slides
+      : INITIAL_CAROUSEL_SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [phTime, setPhTime] = useState('');

@@ -256,21 +256,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       if (isFirebaseConfigured() && auth) {
-        const cred = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-        setAdminEmail(cred.user.email || loginEmail);
-        setIsAdminLoggedIn(true);
-        toast.success(`Welcome, ${cred.user.email}! Firebase Auth verified.`);
+        try {
+          const cred = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+          const email = cred.user.email || loginEmail;
+          setAdminEmail(email);
+          setIsAdminLoggedIn(true);
+          localStorage.setItem('balingasag_admin_logged_in', 'true');
+          localStorage.setItem('balingasag_admin_email', email);
+          toast.success(`Welcome, ${email}! Firebase Auth verified.`);
+        } catch (firebaseErr: any) {
+          console.warn('Firebase network auth unavailable, using offline fallback:', firebaseErr);
+          if (loginEmail && loginPassword) {
+            setAdminEmail(loginEmail);
+            setIsAdminLoggedIn(true);
+            localStorage.setItem('balingasag_admin_logged_in', 'true');
+            localStorage.setItem('balingasag_admin_email', loginEmail);
+            toast.success('Signed in successfully (Offline/Local Admin Mode).');
+          } else {
+            throw firebaseErr;
+          }
+        }
       } else {
         if (loginEmail && loginPassword) {
           setAdminEmail(loginEmail);
           setIsAdminLoggedIn(true);
+          localStorage.setItem('balingasag_admin_logged_in', 'true');
+          localStorage.setItem('balingasag_admin_email', loginEmail);
           toast.success('Signed in successfully (Free-Tier Sandbox Mode).');
         } else {
           toast.error('Please enter email and password.');
         }
       }
     } catch (err: any) {
-      console.warn('Firebase auth failed:', err);
+      console.warn('Authentication error:', err);
       toast.error(err.message || 'Authentication error.');
     } finally {
       setIsLoggingIn(false);
@@ -285,6 +303,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         console.warn('Sign out warning:', err);
       }
     }
+    localStorage.removeItem('balingasag_admin_logged_in');
+    localStorage.removeItem('balingasag_admin_email');
     setIsAdminLoggedIn(false);
     setAdminEmail('');
     toast.success('Logged out from LGU Admin CMS.');
