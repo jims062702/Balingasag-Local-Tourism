@@ -4,7 +4,8 @@
  * Features an instant deterministic local FAQ cache to save 100% of tokens on basic queries.
  */
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_KEY =
+  import.meta.env.VITE_GEMINI_API_KEY || '';
 
 const MODEL_NAME = 'gemini-3.5-flash-lite';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;

@@ -32,9 +32,9 @@ async function sha1Hex(str: string): Promise<string> {
 }
 
 export const getCloudinaryConfig = () => {
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'asqtmony';
-  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '415991932857186';
-  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || 'C_XIxTFBnFzSzJ1mb2PBskjc1Qg';
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '';
+  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || '';
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
   return {
     cloudName,
