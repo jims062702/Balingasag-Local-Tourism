@@ -56,6 +56,9 @@ import {
   toggleCarouselSlideActive,
   seedFirestoreDatabase,
   updateMunicipalProfile,
+  getMediaLibrary,
+  saveMediaLibraryUrl,
+  INITIAL_USER_UPLOADED_IMAGES,
 } from '../services/firestoreService';
 import { INITIAL_MUNICIPAL_PROFILE } from '../data/initialData';
 import { uploadToCloudinary, getCloudinaryConfig, PRESET_GALLERY_IMAGES, getHeroOptimizedUrl } from '../services/cloudinary';
@@ -170,11 +173,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const saved = localStorage.getItem('balingasag_uploaded_images');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return Array.from(new Set([...INITIAL_USER_UPLOADED_IMAGES, ...parsed]));
+        }
       }
     } catch {}
-    return [];
+    return INITIAL_USER_UPLOADED_IMAGES;
   });
+
+  // Sync uploaded images from Firestore cloud settings on mount
+  React.useEffect(() => {
+    getMediaLibrary().then((cloudImages) => {
+      if (cloudImages && cloudImages.length > 0) {
+        setCustomUploadedUrls((prev) => Array.from(new Set([...prev, ...cloudImages])));
+      }
+    });
+  }, []);
 
   const recordUploadedImage = (url: string) => {
     if (!url) return;
@@ -301,6 +315,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }));
       }
       recordUploadedImage(res.secure_url);
+      saveMediaLibraryUrl(res.secure_url);
       toast.success('Photo successfully uploaded & optimized with Cloudinary!', { id: toastId });
     } catch (err: any) {
       toast.error(err.message || 'Cloudinary upload failed', { id: toastId });
@@ -627,6 +642,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         imageUrl: res.secure_url,
       }));
       recordUploadedImage(res.secure_url);
+      saveMediaLibraryUrl(res.secure_url);
       toast.success('Slide photo successfully uploaded with Cloudinary!', { id: toastId });
     } catch (err: any) {
       toast.error(err.message || 'Cloudinary upload failed', { id: toastId });

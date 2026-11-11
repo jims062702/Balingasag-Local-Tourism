@@ -11,6 +11,7 @@ import {
   orderBy,
   serverTimestamp,
   onSnapshot,
+  arrayUnion,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { Destination, TravelAdvisory, LocalEvent, CarouselSlide, MunicipalProfile } from '../types';
@@ -27,6 +28,13 @@ const LOCAL_STORAGE_ADVISORIES_KEY = 'balingasag_advisories_v1';
 const LOCAL_STORAGE_EVENTS_KEY = 'balingasag_events_v1';
 const LOCAL_STORAGE_CAROUSEL_KEY = 'balingasag_carousel_v1';
 const LOCAL_STORAGE_MUNICIPAL_PROFILE_KEY = 'balingasag_municipal_profile_v1';
+const LOCAL_STORAGE_MEDIA_LIBRARY_KEY = 'balingasag_uploaded_images';
+
+export const INITIAL_USER_UPLOADED_IMAGES: string[] = [
+  'https://res.cloudinary.com/asqtmony/image/upload/v1794352896/balingasag_tourism/ljmt6kkqwihxvnnwkacv.jpg',
+  'https://res.cloudinary.com/asqtmony/image/upload/v1794352925/balingasag_tourism/lptbmifjdvqrlkrkpzhe.jpg',
+  'https://res.cloudinary.com/asqtmony/image/upload/v1794352941/balingasag_tourism/xvgdaety0v8e02wqgcee.jpg',
+];
 
 // Helpers to get local fallback data
 const getLocalData = <T>(key: string, fallback: T): T => {
@@ -58,14 +66,15 @@ export const getDestinations = async (): Promise<Destination[]> => {
   if (isFirebaseConfigured() && db) {
     try {
       const colRef = collection(db, 'destinations');
-      const q = query(colRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(colRef);
 
       if (!snapshot.empty) {
-        const items = snapshot.docs.map((docSnap) => ({
-          ...(docSnap.data() as Destination),
-          id: docSnap.id,
-        }));
+        const items = snapshot.docs
+          .map((docSnap) => ({
+            ...(docSnap.data() as Destination),
+            id: docSnap.id,
+          }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         // Update local cache
         setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, items);
         return items;
@@ -115,9 +124,10 @@ export const addDestination = async (
 
   if (isFirebaseConfigured() && db) {
     try {
+      const clean = JSON.parse(JSON.stringify(newDestination));
       const colRef = collection(db, 'destinations');
       const docRef = await addDoc(colRef, {
-        ...newDestination,
+        ...clean,
         serverCreatedAt: serverTimestamp(),
       });
       newDestination.id = docRef.id;
@@ -128,7 +138,7 @@ export const addDestination = async (
 
   // Update local store
   const current = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
-  const updated = [newDestination, ...current];
+  const updated = [newDestination, ...current.filter((d) => d.id !== newDestination.id)];
   setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, updated);
 
   return newDestination;
@@ -141,29 +151,32 @@ export const updateDestination = async (
   const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
   const index = currentList.findIndex((d) => d.id === id);
 
-  if (index === -1) {
-    throw new Error(`Destination with id "${id}" not found.`);
-  }
-
   const updatedItem: Destination = {
-    ...currentList[index],
+    ...(index !== -1 ? currentList[index] : ({} as Destination)),
     ...data,
+    id,
     updatedAt: Date.now(),
   };
 
   if (isFirebaseConfigured() && db) {
     try {
-      const docRef = doc(db, 'destinations', id);
-      await updateDoc(docRef, {
+      const clean = JSON.parse(JSON.stringify({
         ...data,
         updatedAt: Date.now(),
-      });
+      }));
+      const docRef = doc(db, 'destinations', id);
+      await setDoc(docRef, clean, { merge: true });
     } catch (error) {
       console.warn('Error updating Firestore document:', error);
+      throw error;
     }
   }
 
-  currentList[index] = updatedItem;
+  if (index !== -1) {
+    currentList[index] = updatedItem;
+  } else {
+    currentList.unshift(updatedItem);
+  }
   setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, currentList);
 
   return updatedItem;
@@ -337,14 +350,15 @@ export const getCarouselSlides = async (): Promise<CarouselSlide[]> => {
   if (isFirebaseConfigured() && db) {
     try {
       const colRef = collection(db, 'carousel');
-      const q = query(colRef, orderBy('order', 'asc'));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(colRef);
 
       if (!snapshot.empty) {
-        const items = snapshot.docs.map((docSnap) => ({
-          ...(docSnap.data() as CarouselSlide),
-          id: docSnap.id,
-        }));
+        const items = snapshot.docs
+          .map((docSnap) => ({
+            ...(docSnap.data() as CarouselSlide),
+            id: docSnap.id,
+          }))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
         setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, items);
         return items;
       }
@@ -359,20 +373,23 @@ export const getCarouselSlides = async (): Promise<CarouselSlide[]> => {
 export const addCarouselSlide = async (
   slide: Omit<CarouselSlide, 'id' | 'createdAt'>
 ): Promise<CarouselSlide> => {
-  const newId = 'slide-' + Date.now();
+  const timestamp = Date.now();
+  const newId = 'slide-' + timestamp;
   const newSlide: CarouselSlide = {
     ...slide,
     id: newId,
-    createdAt: Date.now(),
+    createdAt: timestamp,
   };
 
   if (isFirebaseConfigured() && db) {
     try {
+      const clean = JSON.parse(JSON.stringify(newSlide));
       const colRef = collection(db, 'carousel');
-      const docRef = await addDoc(colRef, newSlide);
+      const docRef = await addDoc(colRef, clean);
       newSlide.id = docRef.id;
     } catch (error) {
       console.warn('Error adding carousel slide to Firestore:', error);
+      throw error;
     }
   }
 
@@ -388,10 +405,12 @@ export const updateCarouselSlide = async (
 ): Promise<void> => {
   if (isFirebaseConfigured() && db) {
     try {
+      const clean = JSON.parse(JSON.stringify(slide));
       const docRef = doc(db, 'carousel', id);
-      await updateDoc(docRef, slide);
+      await setDoc(docRef, clean, { merge: true });
     } catch (error) {
       console.warn('Error updating carousel slide in Firestore:', error);
+      throw error;
     }
   }
 
@@ -512,6 +531,212 @@ export const subscribeToMunicipalProfile = (
     )
   );
   return () => {};
+};
+
+/**
+ * Real-time listener for Carousel Slides.
+ * Updates all connected landing page hero banners immediately when slides are added/updated!
+ */
+export const subscribeToCarouselSlides = (
+  callback: (slides: CarouselSlide[]) => void
+): (() => void) => {
+  if (isFirebaseConfigured() && db) {
+    try {
+      const colRef = collection(db, 'carousel');
+      const unsubscribe = onSnapshot(
+        colRef,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs
+              .map((docSnap) => ({
+                ...(docSnap.data() as CarouselSlide),
+                id: docSnap.id,
+              }))
+              .sort((a, b) => (a.order || 0) - (b.order || 0));
+            setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, items);
+            callback(items);
+          } else {
+            callback(INITIAL_CAROUSEL_SLIDES);
+          }
+        },
+        (error) => {
+          console.warn('Carousel snapshot listener error:', error);
+          callback(getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES));
+        }
+      );
+      return unsubscribe;
+    } catch (err) {
+      console.warn('Failed to subscribe to carousel slides:', err);
+    }
+  }
+
+  callback(getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES));
+  return () => {};
+};
+
+/**
+ * Real-time listener for Destinations.
+ * Immediately syncs new spots, gallery uploads, and edits across Tourism Spots and Detail views!
+ */
+export const subscribeToDestinations = (
+  callback: (destinations: Destination[]) => void
+): (() => void) => {
+  if (isFirebaseConfigured() && db) {
+    try {
+      const colRef = collection(db, 'destinations');
+      const unsubscribe = onSnapshot(
+        colRef,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs
+              .map((docSnap) => ({
+                ...(docSnap.data() as Destination),
+                id: docSnap.id,
+              }))
+              .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, items);
+            callback(items);
+          } else {
+            callback(INITIAL_DESTINATIONS);
+          }
+        },
+        (error) => {
+          console.warn('Destinations snapshot listener error:', error);
+          callback(getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS));
+        }
+      );
+      return unsubscribe;
+    } catch (err) {
+      console.warn('Failed to subscribe to destinations:', err);
+    }
+  }
+
+  callback(getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS));
+  return () => {};
+};
+
+/**
+ * Real-time listener for Travel Advisories.
+ */
+export const subscribeToAdvisories = (
+  callback: (advisories: TravelAdvisory[]) => void
+): (() => void) => {
+  if (isFirebaseConfigured() && db) {
+    try {
+      const colRef = collection(db, 'advisories');
+      const unsubscribe = onSnapshot(
+        colRef,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs
+              .map((docSnap) => ({
+                ...(docSnap.data() as TravelAdvisory),
+                id: docSnap.id,
+              }))
+              .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, items);
+            callback(items);
+          } else {
+            callback(INITIAL_ADVISORIES);
+          }
+        },
+        (error) => {
+          console.warn('Advisories snapshot error:', error);
+          callback(getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES));
+        }
+      );
+      return unsubscribe;
+    } catch (err) {
+      console.warn('Failed to subscribe to advisories:', err);
+    }
+  }
+
+  callback(getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES));
+  return () => {};
+};
+
+/**
+ * Real-time listener for Local Events & Festivals.
+ */
+export const subscribeToEvents = (
+  callback: (events: LocalEvent[]) => void
+): (() => void) => {
+  if (isFirebaseConfigured() && db) {
+    try {
+      const colRef = collection(db, 'events');
+      const unsubscribe = onSnapshot(
+        colRef,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const items = snapshot.docs
+              .map((docSnap) => ({
+                ...(docSnap.data() as LocalEvent),
+                id: docSnap.id,
+              }))
+              .sort((a, b) => (new Date(a.date).getTime() || 0) - (new Date(b.date).getTime() || 0));
+            setLocalData(LOCAL_STORAGE_EVENTS_KEY, items);
+            callback(items);
+          } else {
+            callback(INITIAL_EVENTS);
+          }
+        },
+        (error) => {
+          console.warn('Events snapshot error:', error);
+          callback(getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS));
+        }
+      );
+      return unsubscribe;
+    } catch (err) {
+      console.warn('Failed to subscribe to events:', err);
+    }
+  }
+
+  callback(getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS));
+  return () => {};
+};
+
+// ==========================================
+// MEDIA LIBRARY REPOSITORY
+// ==========================================
+
+export const getMediaLibrary = async (): Promise<string[]> => {
+  const local = getLocalData<string[]>(LOCAL_STORAGE_MEDIA_LIBRARY_KEY, INITIAL_USER_UPLOADED_IMAGES);
+  const set = new Set<string>([...INITIAL_USER_UPLOADED_IMAGES, ...local]);
+
+  if (isFirebaseConfigured() && db) {
+    try {
+      const docRef = doc(db, 'settings', 'mediaLibrary');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (Array.isArray(data.images)) {
+          data.images.forEach((img: string) => img && set.add(img));
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading media library from Firestore:', err);
+    }
+  }
+
+  const result = Array.from(set);
+  setLocalData(LOCAL_STORAGE_MEDIA_LIBRARY_KEY, result);
+  return result;
+};
+
+export const saveMediaLibraryUrl = async (url: string): Promise<void> => {
+  if (!url) return;
+  const current = getLocalData<string[]>(LOCAL_STORAGE_MEDIA_LIBRARY_KEY, INITIAL_USER_UPLOADED_IMAGES);
+  const updated = Array.from(new Set([url, ...current]));
+  setLocalData(LOCAL_STORAGE_MEDIA_LIBRARY_KEY, updated);
+
+  if (isFirebaseConfigured() && db) {
+    try {
+      const docRef = doc(db, 'settings', 'mediaLibrary');
+      await setDoc(docRef, { images: arrayUnion(url), updatedAt: Date.now() }, { merge: true });
+    } catch (err) {
+      console.warn('Error saving media url to Firestore:', err);
+    }
+  }
 };
 
 // ==========================================

@@ -17,6 +17,10 @@ import {
   getCarouselSlides,
   getMunicipalProfile,
   subscribeToMunicipalProfile,
+  subscribeToCarouselSlides,
+  subscribeToDestinations,
+  subscribeToEvents,
+  subscribeToAdvisories,
 } from './services/firestoreService';
 import { INITIAL_MUNICIPAL_PROFILE } from './data/initialData';
 import toast from 'react-hot-toast';
@@ -107,14 +111,27 @@ export const App: React.FC = () => {
 
     window.addEventListener('hashchange', parseRoute);
 
-    // Real-time Firestore subscription for Municipal Profile (updates live without code change)
+    // Real-time Firestore subscriptions for live updates without manual page reload
     const unsubscribeProfile = subscribeToMunicipalProfile((updatedProfile) => {
       setMunicipalProfile(updatedProfile);
     });
+    const unsubscribeCarousel = subscribeToCarouselSlides((slides) => {
+      setCarouselSlides(slides);
+    });
+    const unsubscribeDestinations = subscribeToDestinations((dests) => {
+      setDestinations(dests);
+    });
+    const unsubscribeEvents = subscribeToEvents((evts) => {
+      setEvents(evts);
+    });
+    const unsubscribeAdvisories = subscribeToAdvisories((advs) => {
+      setAdvisories(advs);
+    });
 
     // Listen to Firebase Auth state
+    let unsubscribeAuth: (() => void) | undefined;
     if (isFirebaseConfigured() && auth) {
-      const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribeAuth = onAuthStateChanged(auth, (user) => {
         if (user) {
           setIsAdminLoggedIn(true);
           setAdminEmail(user.email || 'admin@balingasag.gov.ph');
@@ -123,16 +140,16 @@ export const App: React.FC = () => {
           setAdminEmail('');
         }
       });
-      return () => {
-        window.removeEventListener('hashchange', parseRoute);
-        unsubscribeProfile();
-        unsubscribeAuth();
-      };
     }
 
     return () => {
       window.removeEventListener('hashchange', parseRoute);
       unsubscribeProfile();
+      unsubscribeCarousel();
+      unsubscribeDestinations();
+      unsubscribeEvents();
+      unsubscribeAdvisories();
+      if (unsubscribeAuth) unsubscribeAuth();
     };
   }, []);
 
@@ -178,6 +195,7 @@ export const App: React.FC = () => {
   };
 
   const handleBackToHome = () => {
+    refreshAllData();
     window.location.hash = '#/';
   };
 
