@@ -30,6 +30,12 @@ const LOCAL_STORAGE_CAROUSEL_KEY = 'balingasag_carousel_v1';
 const LOCAL_STORAGE_MUNICIPAL_PROFILE_KEY = 'balingasag_municipal_profile_v1';
 const LOCAL_STORAGE_MEDIA_LIBRARY_KEY = 'balingasag_uploaded_images';
 
+// Persistent tracking of explicitly deleted item IDs (Guarantees deleted items never resurrect on hard refresh)
+const DELETED_DESTINATIONS_KEY = 'balingasag_deleted_destinations_v1';
+const DELETED_CAROUSEL_KEY = 'balingasag_deleted_carousel_v1';
+const DELETED_EVENTS_KEY = 'balingasag_deleted_events_v1';
+const DELETED_ADVISORIES_KEY = 'balingasag_deleted_advisories_v1';
+
 export const INITIAL_USER_UPLOADED_IMAGES: string[] = [
   'https://res.cloudinary.com/asqtmony/image/upload/v1794352896/balingasag_tourism/ljmt6kkqwihxvnnwkacv.jpg',
   'https://res.cloudinary.com/asqtmony/image/upload/v1794352925/balingasag_tourism/lptbmifjdvqrlkrkpzhe.jpg',
@@ -58,6 +64,63 @@ const setLocalData = <T>(key: string, data: T) => {
   }
 };
 
+const getDeletedIds = (key: string): Set<string> => {
+  return new Set(getLocalData<string[]>(key, []));
+};
+
+const addDeletedId = (key: string, id: string) => {
+  if (!id) return;
+  const current = getLocalData<string[]>(key, []);
+  if (!current.includes(id)) {
+    setLocalData(key, [...current, id]);
+  }
+};
+
+const removeDeletedId = (key: string, id: string) => {
+  if (!id) return;
+  const current = getLocalData<string[]>(key, []);
+  setLocalData(key, current.filter((x) => x !== id));
+};
+
+/**
+ * Smart merge destinations from cloud and local:
+ * 1. Filter out all items explicitly marked as deleted.
+ * 2. Keep locally added / modified items so hard refresh never wipes them.
+ * 3. Sync merged state to localStorage.
+ */
+export const mergeDestinations = (cloudItems: Destination[]): Destination[] => {
+  const deletedIds = getDeletedIds(DELETED_DESTINATIONS_KEY);
+  const localItems = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
+
+  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
+  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+
+  const merged: Destination[] = [];
+
+  for (const local of localItems) {
+    if (!local || !local.id || deletedIds.has(local.id)) continue;
+    const cloud = cloudMap.get(local.id);
+    if (cloud) {
+      const useCloud = (cloud.updatedAt || 0) > (local.updatedAt || 0);
+      merged.push(useCloud ? cloud : local);
+      cloudMap.delete(local.id);
+    } else {
+      // Local newly added destination: preserve it!
+      merged.push(local);
+    }
+  }
+
+  for (const [, cloud] of cloudMap) {
+    if (!deletedIds.has(cloud.id)) {
+      merged.push(cloud);
+    }
+  }
+
+  merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, merged);
+  return merged;
+};
+
 // ==========================================
 // DESTINATIONS CRUD
 // ==========================================
@@ -69,27 +132,18 @@ export const getDestinations = async (): Promise<Destination[]> => {
       const snapshot = await getDocs(colRef);
 
       if (!snapshot.empty) {
-        const items = snapshot.docs
-          .map((docSnap) => ({
-            ...(docSnap.data() as Destination),
-            id: docSnap.id,
-          }))
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        // Update local cache
-        setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, items);
-        return items;
-      } else {
-        // If Firestore is empty, seed it with the initial Balingasag items
-        console.info('Firestore destinations empty. Seeding initial attractions...');
-        await seedFirestoreDatabase();
-        return INITIAL_DESTINATIONS;
+        const items = snapshot.docs.map((docSnap) => ({
+          ...(docSnap.data() as Destination),
+          id: docSnap.id,
+        }));
+        return mergeDestinations(items);
       }
     } catch (error) {
-      console.warn('Error reading from Firestore, falling back to local storage:', error);
+      console.warn('Error reading from Firestore, using local data:', error);
     }
   }
 
-  return getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
+  return mergeDestinations([]);
 };
 
 export const getDestinationById = async (id: string): Promise<Destination | null> => {
@@ -122,24 +176,27 @@ export const addDestination = async (
     updatedAt: timestamp,
   };
 
-  if (isFirebaseConfigured() && db) {
-    try {
-      const clean = JSON.parse(JSON.stringify(newDestination));
-      const colRef = collection(db, 'destinations');
-      const docRef = await addDoc(colRef, {
-        ...clean,
-        serverCreatedAt: serverTimestamp(),
-      });
-      newDestination.id = docRef.id;
-    } catch (error) {
-      console.warn('Error adding to Firestore, saving to local store:', error);
-    }
-  }
+  // Remove from deleted list if it was previously deleted
+  removeDeletedId(DELETED_DESTINATIONS_KEY, newId);
 
-  // Update local store
+  // 1. Immediately save to local persistent store so it survives hard refreshes
   const current = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
   const updated = [newDestination, ...current.filter((d) => d.id !== newDestination.id)];
   setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, updated);
+
+  // 2. Sync to Firestore with deterministic ID
+  if (isFirebaseConfigured() && db) {
+    try {
+      const clean = JSON.parse(JSON.stringify(newDestination));
+      const docRef = doc(db, 'destinations', newId);
+      await setDoc(docRef, {
+        ...clean,
+        serverCreatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (error) {
+      console.warn('Firestore offline/delayed, spot saved securely to local storage:', error);
+    }
+  }
 
   return newDestination;
 };
@@ -148,6 +205,8 @@ export const updateDestination = async (
   id: string,
   data: Partial<Omit<Destination, 'id' | 'createdAt'>>
 ): Promise<Destination> => {
+  removeDeletedId(DELETED_DESTINATIONS_KEY, id);
+
   const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
   const index = currentList.findIndex((d) => d.id === id);
 
@@ -158,6 +217,13 @@ export const updateDestination = async (
     updatedAt: Date.now(),
   };
 
+  if (index !== -1) {
+    currentList[index] = updatedItem;
+  } else {
+    currentList.unshift(updatedItem);
+  }
+  setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, currentList);
+
   if (isFirebaseConfigured() && db) {
     try {
       const clean = JSON.parse(JSON.stringify({
@@ -167,61 +233,87 @@ export const updateDestination = async (
       const docRef = doc(db, 'destinations', id);
       await setDoc(docRef, clean, { merge: true });
     } catch (error) {
-      console.warn('Error updating Firestore document:', error);
-      throw error;
+      console.warn('Firestore offline/delayed, update saved locally:', error);
     }
   }
-
-  if (index !== -1) {
-    currentList[index] = updatedItem;
-  } else {
-    currentList.unshift(updatedItem);
-  }
-  setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, currentList);
 
   return updatedItem;
 };
 
 export const deleteDestination = async (id: string): Promise<void> => {
+  // 1. Mark as permanently deleted so cloud resync never revives it
+  addDeletedId(DELETED_DESTINATIONS_KEY, id);
+
+  // 2. Remove from local store immediately
+  const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
+  const updated = currentList.filter((d) => d.id !== id);
+  setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, updated);
+
+  // 3. Sync deletion to Firestore
   if (isFirebaseConfigured() && db) {
     try {
       const docRef = doc(db, 'destinations', id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.warn('Error deleting from Firestore:', error);
+      console.warn('Firestore delete offline/delayed, deletion preserved locally:', error);
     }
   }
-
-  const currentList = getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
-  const updated = currentList.filter((d) => d.id !== id);
-  setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, updated);
 };
 
 // ==========================================
 // TRAVEL ADVISORIES CRUD
 // ==========================================
 
+export const mergeAdvisories = (cloudItems: TravelAdvisory[]): TravelAdvisory[] => {
+  const deletedIds = getDeletedIds(DELETED_ADVISORIES_KEY);
+  const localItems = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
+
+  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
+  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+
+  const merged: TravelAdvisory[] = [];
+
+  for (const local of localItems) {
+    if (!local || !local.id || deletedIds.has(local.id)) continue;
+    const cloud = cloudMap.get(local.id);
+    if (cloud) {
+      merged.push(cloud);
+      cloudMap.delete(local.id);
+    } else {
+      merged.push(local);
+    }
+  }
+
+  for (const [, cloud] of cloudMap) {
+    if (!deletedIds.has(cloud.id)) {
+      merged.push(cloud);
+    }
+  }
+
+  merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, merged);
+  return merged;
+};
+
 export const getAdvisories = async (): Promise<TravelAdvisory[]> => {
   if (isFirebaseConfigured() && db) {
     try {
       const colRef = collection(db, 'advisories');
-      const q = query(colRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(colRef);
 
       if (!snapshot.empty) {
         const items = snapshot.docs.map((docSnap) => ({
           ...(docSnap.data() as TravelAdvisory),
           id: docSnap.id,
         }));
-        setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, items);
-        return items;
+        return mergeAdvisories(items);
       }
     } catch (error) {
       console.warn('Error loading advisories from Firestore:', error);
     }
   }
 
-  return getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
+  return mergeAdvisories([]);
 };
 
 export const addAdvisory = async (
@@ -234,33 +326,38 @@ export const addAdvisory = async (
     createdAt: Date.now(),
   };
 
-  if (isFirebaseConfigured() && db) {
-    try {
-      const colRef = collection(db, 'advisories');
-      const docRef = await addDoc(colRef, newAdv);
-      newAdv.id = docRef.id;
-    } catch (error) {
-      console.warn('Error adding advisory to Firestore:', error);
-    }
-  }
+  removeDeletedId(DELETED_ADVISORIES_KEY, newId);
 
   const current = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
   setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, [newAdv, ...current]);
+
+  if (isFirebaseConfigured() && db) {
+    try {
+      const clean = JSON.parse(JSON.stringify(newAdv));
+      const docRef = doc(db, 'advisories', newId);
+      await setDoc(docRef, clean, { merge: true });
+    } catch (error) {
+      console.warn('Error adding advisory to Firestore, saved locally:', error);
+    }
+  }
+
   return newAdv;
 };
 
 export const deleteAdvisory = async (id: string): Promise<void> => {
+  addDeletedId(DELETED_ADVISORIES_KEY, id);
+
+  const current = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
+  setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, current.filter((a) => a.id !== id));
+
   if (isFirebaseConfigured() && db) {
     try {
       const docRef = doc(db, 'advisories', id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.warn('Error deleting advisory from Firestore:', error);
+      console.warn('Error deleting advisory from Firestore, marked locally:', error);
     }
   }
-
-  const current = getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES);
-  setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, current.filter((a) => a.id !== id));
 };
 
 export const toggleAdvisoryActive = async (id: string, isActive: boolean): Promise<void> => {
@@ -282,27 +379,56 @@ export const toggleAdvisoryActive = async (id: string, isActive: boolean): Promi
 // LOCAL EVENTS CRUD
 // ==========================================
 
+export const mergeEvents = (cloudItems: LocalEvent[]): LocalEvent[] => {
+  const deletedIds = getDeletedIds(DELETED_EVENTS_KEY);
+  const localItems = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
+
+  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
+  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+
+  const merged: LocalEvent[] = [];
+
+  for (const local of localItems) {
+    if (!local || !local.id || deletedIds.has(local.id)) continue;
+    const cloud = cloudMap.get(local.id);
+    if (cloud) {
+      merged.push(cloud);
+      cloudMap.delete(local.id);
+    } else {
+      merged.push(local);
+    }
+  }
+
+  for (const [, cloud] of cloudMap) {
+    if (!deletedIds.has(cloud.id)) {
+      merged.push(cloud);
+    }
+  }
+
+  merged.sort((a, b) => (new Date(a.date).getTime() || 0) - (new Date(b.date).getTime() || 0));
+  setLocalData(LOCAL_STORAGE_EVENTS_KEY, merged);
+  return merged;
+};
+
 export const getEvents = async (): Promise<LocalEvent[]> => {
   if (isFirebaseConfigured() && db) {
     try {
       const colRef = collection(db, 'events');
-      const q = query(colRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(colRef);
 
       if (!snapshot.empty) {
         const items = snapshot.docs.map((docSnap) => ({
           ...(docSnap.data() as LocalEvent),
           id: docSnap.id,
         }));
-        setLocalData(LOCAL_STORAGE_EVENTS_KEY, items);
-        return items;
+        return mergeEvents(items);
       }
     } catch (error) {
       console.warn('Error loading events from Firestore:', error);
     }
   }
 
-  return getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
+  return mergeEvents([]);
 };
 
 export const addEvent = async (event: Omit<LocalEvent, 'id' | 'createdAt'>): Promise<LocalEvent> => {
@@ -313,38 +439,75 @@ export const addEvent = async (event: Omit<LocalEvent, 'id' | 'createdAt'>): Pro
     createdAt: Date.now(),
   };
 
-  if (isFirebaseConfigured() && db) {
-    try {
-      const colRef = collection(db, 'events');
-      const docRef = await addDoc(colRef, newEvt);
-      newEvt.id = docRef.id;
-    } catch (error) {
-      console.warn('Error adding event to Firestore:', error);
-    }
-  }
+  removeDeletedId(DELETED_EVENTS_KEY, newId);
 
   const current = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
   setLocalData(LOCAL_STORAGE_EVENTS_KEY, [newEvt, ...current]);
+
+  if (isFirebaseConfigured() && db) {
+    try {
+      const clean = JSON.parse(JSON.stringify(newEvt));
+      const docRef = doc(db, 'events', newId);
+      await setDoc(docRef, clean, { merge: true });
+    } catch (error) {
+      console.warn('Error adding event to Firestore, saved locally:', error);
+    }
+  }
+
   return newEvt;
 };
 
 export const deleteEvent = async (id: string): Promise<void> => {
+  addDeletedId(DELETED_EVENTS_KEY, id);
+
+  const current = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
+  setLocalData(LOCAL_STORAGE_EVENTS_KEY, current.filter((e) => e.id !== id));
+
   if (isFirebaseConfigured() && db) {
     try {
       const docRef = doc(db, 'events', id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.warn('Error deleting event from Firestore:', error);
+      console.warn('Error deleting event from Firestore, marked locally:', error);
     }
   }
-
-  const current = getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS);
-  setLocalData(LOCAL_STORAGE_EVENTS_KEY, current.filter((e) => e.id !== id));
 };
 
 // ==========================================
 // HERO CAROUSEL CRUD
 // ==========================================
+
+export const mergeCarouselSlides = (cloudItems: CarouselSlide[]): CarouselSlide[] => {
+  const deletedIds = getDeletedIds(DELETED_CAROUSEL_KEY);
+  const localItems = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
+
+  const activeCloud = (cloudItems || []).filter((item) => item && item.id && !deletedIds.has(item.id));
+  const cloudMap = new Map(activeCloud.map((item) => [item.id, item]));
+
+  const merged: CarouselSlide[] = [];
+
+  for (const local of localItems) {
+    if (!local || !local.id || deletedIds.has(local.id)) continue;
+    const cloud = cloudMap.get(local.id);
+    if (cloud) {
+      merged.push(cloud);
+      cloudMap.delete(local.id);
+    } else {
+      // Local newly added slide: preserve it!
+      merged.push(local);
+    }
+  }
+
+  for (const [, cloud] of cloudMap) {
+    if (!deletedIds.has(cloud.id)) {
+      merged.push(cloud);
+    }
+  }
+
+  merged.sort((a, b) => (a.order || 0) - (b.order || 0));
+  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, merged);
+  return merged;
+};
 
 export const getCarouselSlides = async (): Promise<CarouselSlide[]> => {
   if (isFirebaseConfigured() && db) {
@@ -353,21 +516,18 @@ export const getCarouselSlides = async (): Promise<CarouselSlide[]> => {
       const snapshot = await getDocs(colRef);
 
       if (!snapshot.empty) {
-        const items = snapshot.docs
-          .map((docSnap) => ({
-            ...(docSnap.data() as CarouselSlide),
-            id: docSnap.id,
-          }))
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, items);
-        return items;
+        const items = snapshot.docs.map((docSnap) => ({
+          ...(docSnap.data() as CarouselSlide),
+          id: docSnap.id,
+        }));
+        return mergeCarouselSlides(items);
       }
     } catch (error) {
       console.warn('Error fetching carousel from Firestore:', error);
     }
   }
 
-  return getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
+  return mergeCarouselSlides([]);
 };
 
 export const addCarouselSlide = async (
@@ -381,21 +541,24 @@ export const addCarouselSlide = async (
     createdAt: timestamp,
   };
 
+  removeDeletedId(DELETED_CAROUSEL_KEY, newId);
+
+  // 1. Immediately save to local persistent store so it survives hard refreshes
+  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
+  const updated = [...current.filter((s) => s.id !== newId), newSlide].sort((a, b) => a.order - b.order);
+  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, updated);
+
+  // 2. Sync to Firestore with deterministic ID
   if (isFirebaseConfigured() && db) {
     try {
       const clean = JSON.parse(JSON.stringify(newSlide));
-      const colRef = collection(db, 'carousel');
-      const docRef = await addDoc(colRef, clean);
-      newSlide.id = docRef.id;
+      const docRef = doc(db, 'carousel', newId);
+      await setDoc(docRef, clean, { merge: true });
     } catch (error) {
-      console.warn('Error adding carousel slide to Firestore:', error);
-      throw error;
+      console.warn('Firestore offline/delayed, carousel slide saved locally:', error);
     }
   }
 
-  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
-  const updated = [...current, newSlide].sort((a, b) => a.order - b.order);
-  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, updated);
   return newSlide;
 };
 
@@ -403,6 +566,14 @@ export const updateCarouselSlide = async (
   id: string,
   slide: Partial<Omit<CarouselSlide, 'id' | 'createdAt'>>
 ): Promise<void> => {
+  removeDeletedId(DELETED_CAROUSEL_KEY, id);
+
+  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
+  const updated = current
+    .map((s) => (s.id === id ? { ...s, ...slide } : s))
+    .sort((a, b) => a.order - b.order);
+  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, updated);
+
   if (isFirebaseConfigured() && db) {
     try {
       const clean = JSON.parse(JSON.stringify(slide));
@@ -410,29 +581,27 @@ export const updateCarouselSlide = async (
       await setDoc(docRef, clean, { merge: true });
     } catch (error) {
       console.warn('Error updating carousel slide in Firestore:', error);
-      throw error;
     }
   }
-
-  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
-  const updated = current
-    .map((s) => (s.id === id ? { ...s, ...slide } : s))
-    .sort((a, b) => a.order - b.order);
-  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, updated);
 };
 
 export const deleteCarouselSlide = async (id: string): Promise<void> => {
+  // 1. Mark as permanently deleted
+  addDeletedId(DELETED_CAROUSEL_KEY, id);
+
+  // 2. Remove from local store immediately
+  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
+  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, current.filter((s) => s.id !== id));
+
+  // 3. Sync delete to Firestore
   if (isFirebaseConfigured() && db) {
     try {
       const docRef = doc(db, 'carousel', id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.warn('Error deleting carousel slide from Firestore:', error);
+      console.warn('Firestore delete offline/delayed, slide deleted locally:', error);
     }
   }
-
-  const current = getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES);
-  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, current.filter((s) => s.id !== id));
 };
 
 export const toggleCarouselSlideActive = async (id: string, currentState: boolean): Promise<void> => {
@@ -547,21 +716,19 @@ export const subscribeToCarouselSlides = (
         colRef,
         (snapshot) => {
           if (!snapshot.empty) {
-            const items = snapshot.docs
-              .map((docSnap) => ({
-                ...(docSnap.data() as CarouselSlide),
-                id: docSnap.id,
-              }))
-              .sort((a, b) => (a.order || 0) - (b.order || 0));
-            setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, items);
-            callback(items);
+            const items = snapshot.docs.map((docSnap) => ({
+              ...(docSnap.data() as CarouselSlide),
+              id: docSnap.id,
+            }));
+            const merged = mergeCarouselSlides(items);
+            callback(merged);
           } else {
-            callback(INITIAL_CAROUSEL_SLIDES);
+            callback(mergeCarouselSlides([]));
           }
         },
         (error) => {
           console.warn('Carousel snapshot listener error:', error);
-          callback(getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES));
+          callback(mergeCarouselSlides([]));
         }
       );
       return unsubscribe;
@@ -570,7 +737,7 @@ export const subscribeToCarouselSlides = (
     }
   }
 
-  callback(getLocalData<CarouselSlide[]>(LOCAL_STORAGE_CAROUSEL_KEY, INITIAL_CAROUSEL_SLIDES));
+  callback(mergeCarouselSlides([]));
   return () => {};
 };
 
@@ -588,21 +755,19 @@ export const subscribeToDestinations = (
         colRef,
         (snapshot) => {
           if (!snapshot.empty) {
-            const items = snapshot.docs
-              .map((docSnap) => ({
-                ...(docSnap.data() as Destination),
-                id: docSnap.id,
-              }))
-              .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, items);
-            callback(items);
+            const items = snapshot.docs.map((docSnap) => ({
+              ...(docSnap.data() as Destination),
+              id: docSnap.id,
+            }));
+            const merged = mergeDestinations(items);
+            callback(merged);
           } else {
-            callback(INITIAL_DESTINATIONS);
+            callback(mergeDestinations([]));
           }
         },
         (error) => {
           console.warn('Destinations snapshot listener error:', error);
-          callback(getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS));
+          callback(mergeDestinations([]));
         }
       );
       return unsubscribe;
@@ -611,7 +776,7 @@ export const subscribeToDestinations = (
     }
   }
 
-  callback(getLocalData<Destination[]>(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS));
+  callback(mergeDestinations([]));
   return () => {};
 };
 
@@ -628,21 +793,19 @@ export const subscribeToAdvisories = (
         colRef,
         (snapshot) => {
           if (!snapshot.empty) {
-            const items = snapshot.docs
-              .map((docSnap) => ({
-                ...(docSnap.data() as TravelAdvisory),
-                id: docSnap.id,
-              }))
-              .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, items);
-            callback(items);
+            const items = snapshot.docs.map((docSnap) => ({
+              ...(docSnap.data() as TravelAdvisory),
+              id: docSnap.id,
+            }));
+            const merged = mergeAdvisories(items);
+            callback(merged);
           } else {
-            callback(INITIAL_ADVISORIES);
+            callback(mergeAdvisories([]));
           }
         },
         (error) => {
           console.warn('Advisories snapshot error:', error);
-          callback(getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES));
+          callback(mergeAdvisories([]));
         }
       );
       return unsubscribe;
@@ -651,7 +814,7 @@ export const subscribeToAdvisories = (
     }
   }
 
-  callback(getLocalData<TravelAdvisory[]>(LOCAL_STORAGE_ADVISORIES_KEY, INITIAL_ADVISORIES));
+  callback(mergeAdvisories([]));
   return () => {};
 };
 
@@ -668,21 +831,19 @@ export const subscribeToEvents = (
         colRef,
         (snapshot) => {
           if (!snapshot.empty) {
-            const items = snapshot.docs
-              .map((docSnap) => ({
-                ...(docSnap.data() as LocalEvent),
-                id: docSnap.id,
-              }))
-              .sort((a, b) => (new Date(a.date).getTime() || 0) - (new Date(b.date).getTime() || 0));
-            setLocalData(LOCAL_STORAGE_EVENTS_KEY, items);
-            callback(items);
+            const items = snapshot.docs.map((docSnap) => ({
+              ...(docSnap.data() as LocalEvent),
+              id: docSnap.id,
+            }));
+            const merged = mergeEvents(items);
+            callback(merged);
           } else {
-            callback(INITIAL_EVENTS);
+            callback(mergeEvents([]));
           }
         },
         (error) => {
           console.warn('Events snapshot error:', error);
-          callback(getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS));
+          callback(mergeEvents([]));
         }
       );
       return unsubscribe;
@@ -691,7 +852,7 @@ export const subscribeToEvents = (
     }
   }
 
-  callback(getLocalData<LocalEvent[]>(LOCAL_STORAGE_EVENTS_KEY, INITIAL_EVENTS));
+  callback(mergeEvents([]));
   return () => {};
 };
 
@@ -755,6 +916,12 @@ export const seedFirestoreDatabase = async (): Promise<{
   let eCount = 0;
   let cCount = 0;
   let profileSeeded = false;
+
+  // Clear all deleted sets so factory reset restores all records
+  setLocalData(DELETED_DESTINATIONS_KEY, []);
+  setLocalData(DELETED_CAROUSEL_KEY, []);
+  setLocalData(DELETED_EVENTS_KEY, []);
+  setLocalData(DELETED_ADVISORIES_KEY, []);
 
   // Always reset local cache to complete initial set
   setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, INITIAL_DESTINATIONS);
