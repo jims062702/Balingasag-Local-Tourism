@@ -267,14 +267,30 @@ export const deleteDestination = async (id: string): Promise<void> => {
   }
 
   // 2. Remove from local store immediately
-  const updated = currentList.filter((d) => d.id !== id);
+  const updated = currentList.filter(
+    (d) => d.id !== id && (!target?.name || d.name.toLowerCase().trim() !== target.name.toLowerCase().trim())
+  );
   setLocalData(LOCAL_STORAGE_DESTINATIONS_KEY, updated);
 
-  // 3. Sync deletion to Firestore
+  // 3. Sync deletion to Firestore (direct doc ref + query cleanup for mismatched IDs)
   if (isFirebaseConfigured() && db) {
     try {
-      const docRef = doc(db, 'destinations', id);
-      await deleteDoc(docRef);
+      await deleteDoc(doc(db, 'destinations', id)).catch(() => {});
+
+      const snap = await getDocs(collection(db, 'destinations')).catch(() => null);
+      if (snap && !snap.empty) {
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          if (
+            docSnap.id === id ||
+            data.id === id ||
+            (target?.name && data.name && data.name.toLowerCase().trim() === target.name.toLowerCase().trim()) ||
+            (target?.heroImage && data.heroImage === target.heroImage)
+          ) {
+            await deleteDoc(docSnap.ref).catch(() => {});
+          }
+        }
+      }
     } catch (error) {
       console.warn('Firestore delete offline/delayed, deletion preserved locally:', error);
     }
@@ -384,12 +400,28 @@ export const deleteAdvisory = async (id: string): Promise<void> => {
     addDeletedId(DELETED_ADVISORIES_KEY, target.title.toLowerCase().trim());
   }
 
-  setLocalData(LOCAL_STORAGE_ADVISORIES_KEY, current.filter((a) => a.id !== id));
+  setLocalData(
+    LOCAL_STORAGE_ADVISORIES_KEY,
+    current.filter((a) => a.id !== id && (!target?.title || a.title.toLowerCase().trim() !== target.title.toLowerCase().trim()))
+  );
 
   if (isFirebaseConfigured() && db) {
     try {
-      const docRef = doc(db, 'advisories', id);
-      await deleteDoc(docRef);
+      await deleteDoc(doc(db, 'advisories', id)).catch(() => {});
+
+      const snap = await getDocs(collection(db, 'advisories')).catch(() => null);
+      if (snap && !snap.empty) {
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          if (
+            docSnap.id === id ||
+            data.id === id ||
+            (target?.title && data.title && data.title.toLowerCase().trim() === target.title.toLowerCase().trim())
+          ) {
+            await deleteDoc(docSnap.ref).catch(() => {});
+          }
+        }
+      }
     } catch (error) {
       console.warn('Error deleting advisory from Firestore, marked locally:', error);
     }
@@ -512,12 +544,28 @@ export const deleteEvent = async (id: string): Promise<void> => {
     addDeletedId(DELETED_EVENTS_KEY, target.title.toLowerCase().trim());
   }
 
-  setLocalData(LOCAL_STORAGE_EVENTS_KEY, current.filter((e) => e.id !== id));
+  setLocalData(
+    LOCAL_STORAGE_EVENTS_KEY,
+    current.filter((e) => e.id !== id && (!target?.title || e.title.toLowerCase().trim() !== target.title.toLowerCase().trim()))
+  );
 
   if (isFirebaseConfigured() && db) {
     try {
-      const docRef = doc(db, 'events', id);
-      await deleteDoc(docRef);
+      await deleteDoc(doc(db, 'events', id)).catch(() => {});
+
+      const snap = await getDocs(collection(db, 'events')).catch(() => null);
+      if (snap && !snap.empty) {
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          if (
+            docSnap.id === id ||
+            data.id === id ||
+            (target?.title && data.title && data.title.toLowerCase().trim() === target.title.toLowerCase().trim())
+          ) {
+            await deleteDoc(docSnap.ref).catch(() => {});
+          }
+        }
+      }
     } catch (error) {
       console.warn('Error deleting event from Firestore, marked locally:', error);
     }
@@ -661,13 +709,30 @@ export const deleteCarouselSlide = async (id: string): Promise<void> => {
   }
 
   // 2. Remove from local store immediately
-  setLocalData(LOCAL_STORAGE_CAROUSEL_KEY, current.filter((s) => s.id !== id));
+  setLocalData(
+    LOCAL_STORAGE_CAROUSEL_KEY,
+    current.filter((s) => s.id !== id && (!target?.imageUrl || s.imageUrl !== target.imageUrl))
+  );
 
-  // 3. Sync delete to Firestore
+  // 3. Sync delete to Firestore (direct doc ref + query cleanup for mismatched IDs)
   if (isFirebaseConfigured() && db) {
     try {
-      const docRef = doc(db, 'carousel', id);
-      await deleteDoc(docRef);
+      await deleteDoc(doc(db, 'carousel', id)).catch(() => {});
+
+      const snap = await getDocs(collection(db, 'carousel')).catch(() => null);
+      if (snap && !snap.empty) {
+        for (const docSnap of snap.docs) {
+          const data = docSnap.data();
+          if (
+            docSnap.id === id ||
+            data.id === id ||
+            (target?.imageUrl && data.imageUrl === target.imageUrl) ||
+            (target?.title && data.title && data.title.toLowerCase().trim() === target.title.toLowerCase().trim())
+          ) {
+            await deleteDoc(docSnap.ref).catch(() => {});
+          }
+        }
+      }
     } catch (error) {
       console.warn('Firestore delete offline/delayed, slide deleted locally:', error);
     }

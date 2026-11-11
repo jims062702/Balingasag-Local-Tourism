@@ -15,11 +15,22 @@ import { LocalEvent } from '../types';
 import { getEvents } from '../services/firestoreService';
 import { getOptimizedMediaUrl } from '../services/cloudinary';
 
-export const EventsCalendar: React.FC = () => {
-  const [events, setEvents] = useState<LocalEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+interface EventsCalendarProps {
+  events?: LocalEvent[];
+}
+
+export const EventsCalendar: React.FC<EventsCalendarProps> = ({ events: propEvents }) => {
+  const [events, setEvents] = useState<LocalEvent[]>(() => propEvents || []);
+  const [loading, setLoading] = useState(!propEvents);
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (propEvents) {
+      setEvents(propEvents);
+      setLoading(false);
+    }
+  }, [propEvents]);
 
   const loadEventsData = async () => {
     setLoading(true);
@@ -34,7 +45,9 @@ export const EventsCalendar: React.FC = () => {
   };
 
   useEffect(() => {
-    loadEventsData();
+    if (!propEvents) {
+      loadEventsData();
+    }
   }, []);
 
   const generateGoogleCalendarUrl = (event: LocalEvent) => {

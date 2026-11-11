@@ -330,10 +330,10 @@ export const App: React.FC = () => {
             />
 
             {/* 3. WEATHER & ADVISORIES SECTION */}
-            <WeatherAdvisoryWidget />
+            <WeatherAdvisoryWidget advisories={advisories} />
 
             {/* 4. FESTIVALS & TOWN EVENTS CALENDAR */}
-            <EventsCalendar />
+            <EventsCalendar events={events} />
 
             {/* 5. MUNICIPAL PROFILE & DEMOGRAPHICS (30 Barangays, 74,385 Pop, 18,235.36 Ha) */}
             <DemographicsSection

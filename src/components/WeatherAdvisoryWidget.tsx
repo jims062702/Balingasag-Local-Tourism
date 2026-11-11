@@ -19,12 +19,27 @@ import { TravelAdvisory, WeatherData } from '../types';
 import { getAdvisories } from '../services/firestoreService';
 import { DroppingWaterAnimation, BlowingWindAnimation } from './WeatherAnimations';
 
-export const WeatherAdvisoryWidget: React.FC = () => {
+interface WeatherAdvisoryWidgetProps {
+  advisories?: TravelAdvisory[];
+}
+
+export const WeatherAdvisoryWidget: React.FC<WeatherAdvisoryWidgetProps> = ({
+  advisories: propAdvisories,
+}) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [advisories, setAdvisories] = useState<TravelAdvisory[]>([]);
+  const [advisories, setAdvisories] = useState<TravelAdvisory[]>(() => {
+    return propAdvisories ? propAdvisories.filter((a) => a.isActive) : [];
+  });
   const [loadingWeather, setLoadingWeather] = useState<boolean>(true);
-  const [loadingAdvisories, setLoadingAdvisories] = useState<boolean>(true);
+  const [loadingAdvisories, setLoadingAdvisories] = useState<boolean>(!propAdvisories);
   const [activeFilter, setActiveFilter] = useState<'all' | 'warning' | 'advisory' | 'info'>('all');
+
+  useEffect(() => {
+    if (propAdvisories) {
+      setAdvisories(propAdvisories.filter((a) => a.isActive));
+      setLoadingAdvisories(false);
+    }
+  }, [propAdvisories]);
 
   const fetchBalingasagWeather = async () => {
     setLoadingWeather(true);
@@ -89,7 +104,9 @@ export const WeatherAdvisoryWidget: React.FC = () => {
 
   useEffect(() => {
     fetchBalingasagWeather();
-    loadAdvisories();
+    if (!propAdvisories) {
+      loadAdvisories();
+    }
   }, []);
 
   const getWeatherIcon = (code: number) => {
