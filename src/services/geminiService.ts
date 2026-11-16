@@ -8,7 +8,8 @@ const GEMINI_API_KEY =
   import.meta.env.VITE_GEMINI_API_KEY || '';
 
 const MODEL_NAME = 'gemini-3.5-flash-lite';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+// Omit ?key= from the URL when using the x-goog-api-key header for AQ.* keys
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
 
 export interface ChatMessage {
   id: string;
@@ -200,7 +201,7 @@ export const checkDeterministicFaq = (query: string): string | null => {
     q.includes('contact number') ||
     q.includes('rescue')
   ) {
-    return `Here are the official 24/7 Emergency Hotlines in Balingasag:\n\n* **MDRRM 24/7 OPCEN:** 0975-691-0090 (TM)\n* **PNP Balingasag:** 0998-598-6948 (SMART) / 0927-512-1838 (TM)\n* **BFP Fire Station:** 0997-568-8288 (TM)\n* **Philippine Coast Guard:** 0966-947-7077 (TM)\n* **Municipal Health Office:** 0963-065-1678 (TNT)\n\nStay safe and keep these numbers on hand!`;
+    return `Here are the official 24/7 Emergency Hotlines in Balingasag:\n\n**MDRRM 24/7 OPCEN:** 0975-691-0090 (TM)\n**PNP Balingasag:** 0998-598-6948 (SMART) / 0927-512-1838 (TM)\n**BFP Fire Station:** 0997-568-8288 (TM)\n**Philippine Coast Guard:** 0966-947-7077 (TM)\n**Municipal Health Office:** 0963-065-1678 (TNT)\n\nStay safe and keep these numbers on hand!`;
   }
 
   // 3. Camuayan Cold Springs
@@ -245,7 +246,7 @@ export const checkDeterministicFaq = (query: string): string | null => {
     q.includes('bus') ||
     q.includes('van')
   ) {
-    return `**How to Reach Balingasag:**\n\n* **From Cagayan de Oro City (Agora Terminal):** Ride any northbound bus (Rural Transit / Bachelor Express) or passenger van bound for Gingoog, Butuan, or Balingasag.\n* **Travel Time:** Approx. 1.5 to 2 hours along the paved Butuan-CDO-Iligan national highway.\n* **Drop-off:** Balingasag Bus Terminal or Poblacion Town Center.`;
+    return `**How to Reach Balingasag:**\n\n**From Cagayan de Oro City (Agora Terminal):** Ride any northbound bus (Rural Transit / Bachelor Express) or passenger van bound for Gingoog, Butuan, or Balingasag.\n**Travel Time:** Approx. 1.5 to 2 hours along the paved Butuan-CDO-Iligan national highway.\n**Drop-off:** Balingasag Bus Terminal or Poblacion Town Center.`;
   }
 
   // 7. Town Fiesta & Festivals
@@ -266,7 +267,7 @@ export const checkDeterministicFaq = (query: string): string | null => {
     q.includes('officials') ||
     q.includes('council')
   ) {
-    return `The municipal government of Balingasag is led by:\n\n* **Municipal Mayor:** Hon. Alexis S. Moreno\n* **Vice Mayor:** Hon. John D. Valledor\n* Supported by the 10 members of the Sangguniang Bayan presiding from the Legislative Building at Poblacion.`;
+    return `The municipal government of Balingasag is led by:\n\n**Municipal Mayor:** Hon. Alexis S. Moreno\n**Vice Mayor:** Hon. John D. Valledor\nSupported by the 10 members of the Sangguniang Bayan presiding from the Legislative Building at Poblacion.`;
   }
 
   return null;
@@ -316,6 +317,7 @@ export const sendGeminiChatMessage = async (
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY, // Authenticates AQ.* keys correctly
     },
     body: JSON.stringify(payload),
   });
